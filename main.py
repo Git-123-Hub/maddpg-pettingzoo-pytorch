@@ -1,25 +1,40 @@
 import argparse
 
 import numpy as np
-from pettingzoo.mpe import simple_adversary_v2
+from pettingzoo.mpe import simple_adversary_v2, simple_crypto_v2, simple_reference_v2, simple_spread_v2, \
+    simple_tag_v2, simple_world_comm_v2, simple_push_v2, simple_speaker_listener_v3
 import matplotlib.pyplot as plt
 
 from MADDPG import MADDPG
 
+
+def get_env(name, N=2, max_cycles=25, continuous_actions=True):
+    name_map = {  # env function, env name
+        'adversary': [simple_adversary_v2.parallel_env, 'simple_adversary_v2'],
+        'crypto': [simple_crypto_v2.parallel_env, 'simple_crypto_v2'],
+        'push': [simple_push_v2.parallel_env, 'simple_push_v2'],
+        'reference': [simple_reference_v2.parallel_env, 'simple_reference_v2'],
+        'speaker': [simple_speaker_listener_v3.parallel_env, 'simple_speaker_listener_v2'],
+        'spread': [simple_spread_v2.parallel_env, 'simple_spread_v2'],
+        'tag': [simple_tag_v2.parallel_env, 'simple_tag_v2'],
+        'comm': [simple_world_comm_v2.parallel_env, 'simple_world_comm_v2'],
+    }
+    env_fn, full_name = name_map[name]
+    return env_fn(N=N, max_cycles=max_cycles, continuous_actions=continuous_actions), full_name
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('env-name', type=str, default='adversary', help='name of the env',
+    parser.add_argument('env_name', type=str, default='adversary', help='name of the env',
                         choices=['adversary', 'crypto', 'push', 'reference', 'speaker', 'spread', 'tag',
                                  'comm'])
     parser.add_argument('--episode-num', type=int, default=500,
                         help='total episode num during training procedure')
     parser.add_argument('--learn-interval', type=int, default=10, help='steps interval between learning time')
     args = parser.parse_args()
-    # todo: get env and env name form args.env_name
     # todo: use continuous action or discrete action
     # todo: option on creating env
-    env = simple_adversary_v2.parallel_env(N=2, max_cycles=25, continuous_actions=True)
-    env_name = 'simple_adversary_v2'
+    env, env_name = get_env(args.env_name)
     env.reset()
     maddpg = MADDPG(env)
 
@@ -55,6 +70,6 @@ if __name__ == '__main__':
     ax.legend()
     ax.set_xlabel('episode')
     ax.set_ylabel('reward')
-    name = f'maddpg solve {env_name}'
-    ax.set_title(name)
-    plt.savefig(name)
+    title = f'maddpg solve {env_name}'
+    ax.set_title(title)
+    plt.savefig(title)
