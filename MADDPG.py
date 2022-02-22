@@ -36,7 +36,6 @@ class MADDPG:
     def select_action(self, states):
         actions = {}
         for agent, state in states.items():
-            print(agent, state)
             actions[agent] = self.agents[agent].act(state)
         return actions
 

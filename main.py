@@ -1,25 +1,60 @@
 import argparse
 
+import numpy as np
 from pettingzoo.mpe import simple_adversary_v2
+import matplotlib.pyplot as plt
 
 from MADDPG import MADDPG
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('env_name', type=str, default='adversary', help='name of the env',
+    parser.add_argument('env-name', type=str, default='adversary', help='name of the env',
                         choices=['adversary', 'crypto', 'push', 'reference', 'speaker', 'spread', 'tag',
                                  'comm'])
+    parser.add_argument('--episode-num', type=int, default=500,
+                        help='total episode num during training procedure')
+    parser.add_argument('--learn-interval', type=int, default=10, help='steps interval between learning time')
     args = parser.parse_args()
-    # todo: get env form args.env_name
+    # todo: get env and env name form args.env_name
     # todo: use continuous action or discrete action
     # todo: option on creating env
     env = simple_adversary_v2.parallel_env(N=2, max_cycles=25, continuous_actions=True)
-    states = env.reset()
+    env_name = 'simple_adversary_v2'
+    env.reset()
     maddpg = MADDPG(env)
-    while env.agents:
-        # actions = {agent: policy(observations[agent], agent) for agent in parallel_env.agents}
-        # actions = {agent: parallel_env.action_space(agent).sample() for agent in parallel_env.agents}
-        actions = maddpg.select_action(states)
-        next_states, rewards, dones, infos = env.step(actions)
-        maddpg.add(states, actions, rewards, next_states, dones)
-        states = next_states
+
+    step = 0
+    agent_num = env.num_agents
+    # reward of each episode of each agent
+    episode_rewards = {agent: np.zeros(args.episode_num) for agent in env.agents}
+    for episode in range(args.episode_num):
+        states = env.reset()
+        agent_reward = {agent: 0 for agent in env.agents}  # agent reward of the current episode
+        while env.agents:  # interact with the env for an episode
+            step += 1
+            actions = maddpg.select_action(states)
+            next_states, rewards, dones, infos = env.step(actions)
+            maddpg.add(states, actions, rewards, next_states, dones)
+            states = next_states
+
+            for agent, reward in rewards.items():  # update reward
+                agent_reward[agent] += reward
+
+            if step % args.learn_interval == 0:  # learn every few steps
+                maddpg.learn()
+
+        # episode finishes, record reward
+        for agent, reward in agent_reward.items():
+            episode_rewards[agent][episode] = reward
+
+    # training finishes, plot reward
+    fig, ax = plt.subplots()
+    x = range(1, args.episode_num + 1)
+    for agent, rewards in episode_rewards.items():
+        ax.plot(x, rewards, label=agent)
+    ax.legend()
+    ax.set_xlabel('episode')
+    ax.set_ylabel('reward')
+    name = f'maddpg solve {env_name}'
+    ax.set_title(name)
+    plt.savefig(name)
