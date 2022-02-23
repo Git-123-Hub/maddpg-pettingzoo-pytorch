@@ -1,4 +1,7 @@
+import numpy as np
+import torch
 from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv
+import torch.nn.functional as F
 
 from Agent import Agent
 from ReplayBuffer import ReplayBuffer
@@ -27,10 +30,55 @@ class MADDPG:
             self.buffers[agent] = ReplayBuffer(10000, 256)
 
     def learn(self):
-        pass
+        # get the total num of transitions, these buffers should have same number of transitions
+        total_num = len(list(self.buffers.values())[0])
+        if total_num <= 256:  # only start to learn when there are enough experiences to sample
+            return
+        # sample from all the replay buffer using the same index
+        # todo: how to use batch size
+        indices = np.random.choice(total_num, size=256, replace=False)
+        samples = {}
+        state_list, act_list, next_state_list, next_act_list = [], [], [], []
+        for agent, buffer in self.buffers.items():
+            transitions = buffer.sample(indices)
+            samples[agent] = transitions
+            state_list.append(transitions[0])
+            act_list.append(transitions[1])
+            next_state_list.append(transitions[3])
+            # calculate next_action using target_network and next_state
+            next_act_list.append(self.agents[agent].act(transitions[3], target=True, ndarray=False))
+
+        # critic input all the states and actions
+        # if there are 3 agents for example, the input for critic is (obs1, obs2, obs3, act1, act2, act3)
+        target_critic_in = torch.cat(next_state_list + next_act_list, 1)
+        critic_in = torch.cat(state_list + act_list, 1)  # torch.Size([batch_size, global_obs_act_dim])
+
+        # update all agents
+        for name, agent in self.agents.items():
+            # update critic
+            states, actions, rewards, next_states, dones = samples[name]
+            # todo: specify gamma
+            target_value = rewards + 0.99 * agent.critic_value(target_critic_in, target=True) * (1 - dones)
+            critic_value = agent.critic_value(critic_in)  # tensor with the length of batch_size
+            critic_loss = F.mse_loss(target_value.detach(), critic_value, reduction='mean')
+            agent.update_critic(critic_loss)
+
+            # update actor
+            # calculate action using actor
+            action = agent.act(states, ndarray=False)
+            act_list = []
+            for agent_name in self.agents.keys():  # loop over all the agents
+                if agent_name == name:  # action of the current agent is calculate using its actor
+                    act_list.append(action)
+                else:  # action of other agents is from the sample
+                    act_list.append(samples[agent_name][1])
+            critic_in = torch.cat(state_list + act_list, 1)
+            actor_loss = -agent.critic_value(critic_in).mean()
+            # actor_loss = -(action * critic_value).mean()
+            agent.update_actor(actor_loss)
 
     def update_target(self, tau):
-        for agent in self.agents:
+        for agent in self.agents.values():
             agent.update_target(tau)
 
     def select_action(self, states):

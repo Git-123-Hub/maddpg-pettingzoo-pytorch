@@ -42,14 +42,13 @@ class ReplayBuffer:
         if self._size < self.capacity:
             self._size += 1
 
-    def sample(self, size=None, indices=None):
-        if size is None: size = self.batch_size
-        if indices is None:
-            # sample all the current useful index without duplicate(replace=False)
-            indices = np.random.choice(self._size, size=size, replace=False)
-
-        # retrieve data using `__getitem__`, Note that the data stored is ndarray
-        states, actions, rewards, next_states, dones = self[indices]
+    def sample(self, indices):
+        # retrieve data, Note that the data stored is ndarray
+        states = self.state[indices]
+        actions = self.action[indices]
+        rewards = self.reward[indices]
+        next_states = self.next_state[indices]
+        dones = self.done[indices]
 
         def transfer(data, first_dim=False):
             """
@@ -69,16 +68,7 @@ class ReplayBuffer:
         next_states = transfer(next_states, first_dim=True)  # Size([batch_size, state_dim])
         dones = transfer(dones)  # just a tensor with length: batch_size
 
-        result = states, actions, rewards, next_states, dones
-        return result
+        return states, actions, rewards, next_states, dones
 
     def __len__(self):
         return self._size
-
-    def __getitem__(self, index):
-        state = self.state[index]
-        action = self.action[index]
-        reward = self.reward[index]
-        next_state = self.next_state[index]
-        done = self.done[index]
-        return state, action, reward, next_state, done

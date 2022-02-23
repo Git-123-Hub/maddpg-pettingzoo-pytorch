@@ -31,6 +31,9 @@ if __name__ == '__main__':
     parser.add_argument('--episode-num', type=int, default=500,
                         help='total episode num during training procedure')
     parser.add_argument('--learn-interval', type=int, default=10, help='steps interval between learning time')
+    parser.add_argument('--update-interval', type=int, default=30,
+                        help='step interval of updating target network')
+    parser.add_argument('--tau', type=float, default=0.01, help='soft update parameter')
     args = parser.parse_args()
     # todo: use continuous action or discrete action
     # todo: option on creating env
@@ -58,9 +61,15 @@ if __name__ == '__main__':
             if step % args.learn_interval == 0:  # learn every few steps
                 maddpg.learn()
 
+            if step % args.update_interval == 0:  # update target network every few steps
+                maddpg.update_target(args.tau)
+
+        message = f'episode {episode + 1}, '
         # episode finishes, record reward
         for agent, reward in agent_reward.items():
             episode_rewards[agent][episode] = reward
+            message += f'{agent}: {reward:>4f}; '
+        print(message)
 
     # training finishes, plot reward
     fig, ax = plt.subplots()

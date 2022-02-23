@@ -18,11 +18,37 @@ class Agent:
         self.target_actor = deepcopy(self.actor)
         self.target_critic = deepcopy(self.critic)
 
-    def act(self, state):
+    def act(self, state, *, target=False, ndarray=True):
+        # todo: add noise
         if isinstance(state, np.ndarray):
             state = torch.from_numpy(state).unsqueeze(0)  # torch.Size([1, state_size])
-        action = self.actor(state)  # torch.Size([1, action_size])
-        return action.detach().squeeze(0).numpy()  # ndarray of length: action_size
+        if target:  # use target network to get target action
+            # todo: should target act add noise ????
+            action = self.target_actor(state)  # torch.Size([1, action_size])
+        else:
+            action = self.actor(state)  # torch.Size([1, action_size])
+
+        action = action.detach().squeeze(0)  # tensor of length: action_size
+        if ndarray:
+            return action.numpy()  # ndarray of length: action_size
+        else:
+            return action
+
+    def critic_value(self, x, *, target=False):
+        if target:
+            return self.target_critic(x).squeeze(1)  # tensor with length of batch_size
+        else:
+            return self.critic(x).squeeze(1)
+
+    def update_actor(self, loss):
+        self.actor_optimizer.zero_grad()
+        loss.backward()
+        self.actor_optimizer.step()
+
+    def update_critic(self, loss):
+        self.critic_optimizer.zero_grad()
+        loss.backward()
+        self.critic_optimizer.step()
 
     def get_value(self, obs, act):
         pass
