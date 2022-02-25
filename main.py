@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import numpy as np
 from pettingzoo.mpe import simple_adversary_v2, simple_crypto_v2, simple_reference_v2, simple_spread_v2, \
@@ -8,7 +9,7 @@ import matplotlib.pyplot as plt
 from MADDPG import MADDPG
 
 
-def get_env(name, N=2, max_cycles=25, continuous_actions=True):
+def get_env(name, N=2, max_cycles=250, continuous_actions=True):
     name_map = {  # env function, env name
         'adversary': [simple_adversary_v2.parallel_env, 'simple_adversary_v2'],
         'crypto': [simple_crypto_v2.parallel_env, 'simple_crypto_v2'],
@@ -38,6 +39,11 @@ if __name__ == '__main__':
     # todo: use continuous action or discrete action
     # todo: option on creating env
     env, env_name = get_env(args.env_name)
+    # create folder to save result
+    directory = os.path.join('./results', env_name)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     env.reset()
     maddpg = MADDPG(env)
 
@@ -70,6 +76,8 @@ if __name__ == '__main__':
             episode_rewards[agent][episode] = reward
             message += f'{agent}: {reward:>4f}; '
         print(message)
+
+    maddpg.save(directory)
 
     # training finishes, plot reward
     fig, ax = plt.subplots()

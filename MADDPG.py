@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import torch
 from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv
@@ -81,10 +83,10 @@ class MADDPG:
         for agent in self.agents.values():
             agent.update_target(tau)
 
-    def select_action(self, states):
+    def select_action(self, states, explore=True):
         actions = {}
         for agent, state in states.items():
-            actions[agent] = self.agents[agent].act(state)
+            actions[agent] = self.agents[agent].act(state, explore=explore)
         return actions
 
     def add(self, states, actions, rewards, next_states, dones):
@@ -95,3 +97,15 @@ class MADDPG:
             next_state = next_states[agent]
             done = dones[agent]
             self.buffers[agent].add(state, action, reward, next_state, done)
+
+    def save(self, folder):
+        """save actor parameter of all agents"""
+        total_files = len([file for file in os.listdir(folder)])
+        filename = f'model{total_files + 1}.pt'
+        torch.save({name: agent.actor.state_dict() for name, agent in self.agents.items()},
+                   os.path.join(folder, filename))
+
+    def load(self, filename):
+        data = torch.load(filename)
+        for agent_name, agent in self.agents.items():
+            agent.actor.load_state_dict(data[agent_name])
