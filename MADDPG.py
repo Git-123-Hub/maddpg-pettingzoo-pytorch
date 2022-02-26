@@ -100,10 +100,10 @@ class MADDPG:
 
     def save(self, folder):
         """save actor parameter of all agents"""
-        total_files = len([file for file in os.listdir(folder)])
-        filename = f'model{total_files + 1}.pt'
-        torch.save({name: agent.actor.state_dict() for name, agent in self.agents.items()},
-                   os.path.join(folder, filename))
+        torch.save(
+            {name: agent.actor.state_dict() for name, agent in self.agents.items()},
+            os.path.join(folder, 'model.pt')
+        )
 
     def load(self, filename):
         data = torch.load(filename)

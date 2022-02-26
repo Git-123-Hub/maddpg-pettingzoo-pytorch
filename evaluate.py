@@ -12,22 +12,17 @@ if __name__ == '__main__':
     parser.add_argument('env_name', type=str, default='adversary', help='name of the env',
                         choices=['adversary', 'crypto', 'push', 'reference', 'speaker', 'spread', 'tag',
                                  'comm'])
-    parser.add_argument('model_name', type=str, default='model1', help='filename of the model')
-    parser.add_argument('--model-path', type=str, default=None,
-                        help='path where all the training results are saved')
+    parser.add_argument('folder', type=str, default='1', help='name of the folder where model is saved')
     parser.add_argument('--episode-num', type=int, default=10, help='total episode num during evaluation')
     args = parser.parse_args()
 
     env, env_name = get_env(args.env_name)
-    if args.model_path is None:
-        model_path = os.path.join('./results', env_name)
-    else:
-        model_path = args.model_path
-    assert os.path.exists(model_path)
+    model_dir = os.path.join('./results', env_name, args.folder)
+    assert os.path.exists(model_dir)
 
     env.reset()
     maddpg = MADDPG(env)
-    maddpg.load(os.path.join(model_path, f'{args.model_name}.pt'))
+    maddpg.load(os.path.join(model_dir, 'model.pt'))
 
     agent_num = env.num_agents
     # reward of each episode of each agent
@@ -59,6 +54,7 @@ if __name__ == '__main__':
     ax.legend()
     ax.set_xlabel('episode')
     ax.set_ylabel('reward')
-    title = f'maddpg solve {env_name}'
+    total_files = len([file for file in os.listdir(model_dir)])
+    title = f'evaluate result of maddpg solve {env_name} {total_files - 1}'
     ax.set_title(title)
-    plt.savefig(title)
+    plt.savefig(os.path.join(model_dir, title))

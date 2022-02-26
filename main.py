@@ -40,9 +40,10 @@ if __name__ == '__main__':
     # todo: option on creating env
     env, env_name = get_env(args.env_name)
     # create folder to save result
-    directory = os.path.join('./results', env_name)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    env_dir = os.path.join('./results', env_name)
+    total_files = len([file for file in os.listdir(env_dir)])
+    result_dir = os.path.join(env_dir, f'{total_files + 1}')
+    os.makedirs(result_dir)
 
     env.reset()
     maddpg = MADDPG(env)
@@ -77,7 +78,7 @@ if __name__ == '__main__':
             message += f'{agent}: {reward:>4f}; '
         print(message)
 
-    maddpg.save(directory)
+    maddpg.save(result_dir)
 
     # training finishes, plot reward
     fig, ax = plt.subplots()
@@ -87,6 +88,6 @@ if __name__ == '__main__':
     ax.legend()
     ax.set_xlabel('episode')
     ax.set_ylabel('reward')
-    title = f'maddpg solve {env_name}'
+    title = f'training result of maddpg solve {env_name}'
     ax.set_title(title)
-    plt.savefig(title)
+    plt.savefig(os.path.join(result_dir, title))
