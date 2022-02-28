@@ -52,8 +52,8 @@ class MADDPG:
 
         # critic input all the states and actions
         # if there are 3 agents for example, the input for critic is (obs1, obs2, obs3, act1, act2, act3)
-        target_critic_in = torch.cat(next_state_list + next_act_list, 1)
         critic_in = torch.cat(state_list + act_list, 1)  # torch.Size([batch_size, global_obs_act_dim])
+        target_critic_in = torch.cat(next_state_list + next_act_list, 1)
 
         # update all agents
         for name, agent in self.agents.items():
@@ -72,12 +72,17 @@ class MADDPG:
             for agent_name in self.agents.keys():  # loop over all the agents
                 if agent_name == name:  # action of the current agent is calculate using its actor
                     act_list.append(action)
-                else:  # action of other agents is from the sample
+                else:  # action of other agents is from the samples
                     act_list.append(samples[agent_name][1])
             critic_in = torch.cat(state_list + act_list, 1)
             actor_loss = -agent.critic_value(critic_in).mean()
+            actor_loss += (action ** 2).mean() * 1e-3  # todo: how to calculate loss of actor
             # actor_loss = -(action * critic_value).mean()
             agent.update_actor(actor_loss)
+
+    def scale_noise(self, scale):
+        for agent in self.agents.values():
+            agent.noise.scale = scale
 
     def update_target(self, tau):
         for agent in self.agents.values():

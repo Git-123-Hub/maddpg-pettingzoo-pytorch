@@ -7,9 +7,10 @@ from pettingzoo.mpe import simple_adversary_v2, simple_crypto_v2, simple_referen
 import matplotlib.pyplot as plt
 
 from MADDPG import MADDPG
+from util import LinearDecayParameter
 
 
-def get_env(name, N=2, max_cycles=250, continuous_actions=True):
+def get_env(name, N=2, max_cycles=100, continuous_actions=True):
     name_map = {  # env function, env name
         'adversary': [simple_adversary_v2.parallel_env, 'simple_adversary_v2'],
         'crypto': [simple_crypto_v2.parallel_env, 'simple_crypto_v2'],
@@ -29,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('env_name', type=str, default='adversary', help='name of the env',
                         choices=['adversary', 'crypto', 'push', 'reference', 'speaker', 'spread', 'tag',
                                  'comm'])
-    parser.add_argument('--episode-num', type=int, default=500,
+    parser.add_argument('--episode-num', type=int, default=5000,
                         help='total episode num during training procedure')
     parser.add_argument('--learn-interval', type=int, default=10, help='steps interval between learning time')
     parser.add_argument('--update-interval', type=int, default=30,
@@ -41,18 +42,23 @@ if __name__ == '__main__':
     env, env_name = get_env(args.env_name)
     # create folder to save result
     env_dir = os.path.join('./results', env_name)
+    if not os.path.exists(env_dir):
+        os.makedirs(env_dir)
     total_files = len([file for file in os.listdir(env_dir)])
     result_dir = os.path.join(env_dir, f'{total_files + 1}')
     os.makedirs(result_dir)
 
     env.reset()
     maddpg = MADDPG(env)
+    # no more noise exploration in the last 0.05 episodes
+    noise_scale = LinearDecayParameter(0, 0.3, args.episode_num * 0.95, 0, min_value=0)
 
     step = 0
     agent_num = env.num_agents
     # reward of each episode of each agent
     episode_rewards = {agent: np.zeros(args.episode_num) for agent in env.agents}
     for episode in range(args.episode_num):
+        maddpg.scale_noise(noise_scale(episode))  # scale noise according to current episode num
         states = env.reset()
         agent_reward = {agent: 0 for agent in env.agents}  # agent reward of the current episode
         while env.agents:  # interact with the env for an episode
@@ -71,9 +77,9 @@ if __name__ == '__main__':
             if step % args.update_interval == 0:  # update target network every few steps
                 maddpg.update_target(args.tau)
 
-        message = f'episode {episode + 1}, '
-        # episode finishes, record reward
-        for agent, reward in agent_reward.items():
+        # episode finishes
+        message = f'episode {episode + 1}, noise scale: {noise_scale(episode):>4f}, '
+        for agent, reward in agent_reward.items():  # record reward
             episode_rewards[agent][episode] = reward
             message += f'{agent}: {reward:>4f}; '
         print(message)
