@@ -2,28 +2,12 @@ import argparse
 import os
 
 import numpy as np
-from pettingzoo.mpe import simple_adversary_v2, simple_crypto_v2, simple_reference_v2, simple_spread_v2, \
-    simple_tag_v2, simple_world_comm_v2, simple_push_v2, simple_speaker_listener_v3
 import matplotlib.pyplot as plt
 
 from MADDPG import MADDPG
-from util import LinearDecayParameter
+from util import LinearDecayParameter, get_running_reward, get_env
 
-
-def get_env(name, N=2, max_cycles=100, continuous_actions=True):
-    name_map = {  # env function, env name
-        'adversary': [simple_adversary_v2.parallel_env, 'simple_adversary_v2'],
-        'crypto': [simple_crypto_v2.parallel_env, 'simple_crypto_v2'],
-        'push': [simple_push_v2.parallel_env, 'simple_push_v2'],
-        'reference': [simple_reference_v2.parallel_env, 'simple_reference_v2'],
-        'speaker': [simple_speaker_listener_v3.parallel_env, 'simple_speaker_listener_v2'],
-        'spread': [simple_spread_v2.parallel_env, 'simple_spread_v2'],
-        'tag': [simple_tag_v2.parallel_env, 'simple_tag_v2'],
-        'comm': [simple_world_comm_v2.parallel_env, 'simple_world_comm_v2'],
-    }
-    env_fn, full_name = name_map[name]
-    return env_fn(N=N, max_cycles=max_cycles, continuous_actions=continuous_actions), full_name
-
+# todo: random steps before learn
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -91,6 +75,7 @@ if __name__ == '__main__':
     x = range(1, args.episode_num + 1)
     for agent, rewards in episode_rewards.items():
         ax.plot(x, rewards, label=agent)
+        ax.plot(x, get_running_reward(rewards))
     ax.legend()
     ax.set_xlabel('episode')
     ax.set_ylabel('reward')

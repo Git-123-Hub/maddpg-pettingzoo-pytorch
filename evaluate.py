@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from MADDPG import MADDPG
-from main import get_env
+from util import get_env
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

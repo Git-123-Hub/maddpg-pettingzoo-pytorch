@@ -9,7 +9,7 @@ from torch.optim import Adam
 class Agent:
     """Agent that can interact with environment from pettingzoo"""
 
-    def __init__(self, obs_dim, act_dim, global_obs_dim, lr=0.005):
+    def __init__(self, obs_dim, act_dim, global_obs_dim, lr=0.001):
         # todo: add lr to args
         self.actor = MLPNetwork(obs_dim, act_dim, last_layer=nn.Sigmoid())
         self.critic = MLPNetwork(global_obs_dim, 1)
@@ -30,7 +30,7 @@ class Agent:
             action = self.actor(state)  # torch.Size([1, action_size])
             if explore:
                 action += torch.from_numpy(self.noise.noise()).unsqueeze(0)
-                action.clip(0, 1)
+                action.clip_(0, 1)
 
         action = action.detach().squeeze(0)  # tensor of length: action_size
         if ndarray:

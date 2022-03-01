@@ -47,7 +47,7 @@ class MADDPG:
             state_list.append(transitions[0])
             act_list.append(transitions[1])
             next_state_list.append(transitions[3])
-            # calculate next_action using target_network and next_state
+            # calculate next_action using target_network and next_state, and result should be tensor
             next_act_list.append(self.agents[agent].act(transitions[3], target=True, ndarray=False))
 
         # critic input all the states and actions
@@ -60,23 +60,22 @@ class MADDPG:
             # update critic
             states, actions, rewards, next_states, dones = samples[name]
             # todo: specify gamma
-            target_value = rewards + 0.99 * agent.critic_value(target_critic_in, target=True) * (1 - dones)
+            # todo: scale reward: 0.01
             critic_value = agent.critic_value(critic_in)  # tensor with the length of batch_size
-            critic_loss = F.mse_loss(target_value.detach(), critic_value, reduction='mean')
+            target_value = rewards + 0.99 * agent.critic_value(target_critic_in, target=True) * (1 - dones)
+            critic_loss = F.mse_loss(critic_value, target_value.detach(), reduction='mean')
             agent.update_critic(critic_loss)
 
             # update actor
-            # calculate action using actor
-            action = agent.act(states, ndarray=False)
-            act_list = []
+            action = agent.act(states, ndarray=False)  # calculate action using actor
+            action_list = []
             for agent_name in self.agents.keys():  # loop over all the agents
-                if agent_name == name:  # action of the current agent is calculate using its actor
-                    act_list.append(action)
+                if agent_name == name:  # action of the current agent is calculated using its actor
+                    action_list.append(action)
                 else:  # action of other agents is from the samples
-                    act_list.append(samples[agent_name][1])
-            critic_in = torch.cat(state_list + act_list, 1)
-            actor_loss = -agent.critic_value(critic_in).mean()
-            actor_loss += (action ** 2).mean() * 1e-3  # todo: how to calculate loss of actor
+                    action_list.append(samples[agent_name][1])
+            actor_loss = -agent.critic_value(torch.cat(state_list + action_list, 1)).mean()
+            # actor_loss += (action ** 2).mean() * 1e-3  # todo: how to calculate loss of actor
             # actor_loss = -(action * critic_value).mean()
             agent.update_actor(actor_loss)
 
