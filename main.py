@@ -15,11 +15,11 @@ if __name__ == '__main__':
     parser.add_argument('env_name', type=str, default='adversary', help='name of the env',
                         choices=['adversary', 'crypto', 'push', 'reference', 'speaker', 'spread', 'tag',
                                  'comm'])
-    parser.add_argument('--episode-num', type=int, default=5000,
+    parser.add_argument('--episode-num', type=int, default=1000,
                         help='total episode num during training procedure')
     # todo: remove learn-interval
     parser.add_argument('--learn-interval', type=int, default=1, help='steps interval between learning time')
-    parser.add_argument('--random-steps', type=int, default=200,
+    parser.add_argument('--random-steps', type=int, default=500,
                         help='random steps before the agent start to learn')
     parser.add_argument('--update-interval', type=int, default=100,
                         help='step interval of updating target network')
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     env.reset()
     maddpg = MADDPG(env)
     # no more noise exploration in the last 0.05 episodes
-    noise_scale = LinearDecayParameter(0, 0.3, args.episode_num * 0.95, 0, min_value=0)
+    noise_scale = LinearDecayParameter(0, 0.5, args.episode_num * 0.95, 0, min_value=0)
 
     step = 0
     agent_num = env.num_agents
