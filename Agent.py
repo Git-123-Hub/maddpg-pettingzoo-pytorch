@@ -19,6 +19,7 @@ class Agent:
         self.target_critic = deepcopy(self.critic)
         self.noise = OUNoise(act_dim)  # todo: option on ou-noise
 
+    # todo: more method on act, target act
     def act(self, state, *, target=False, ndarray=True, explore=True):
         # todo: add noise
         if isinstance(state, np.ndarray):

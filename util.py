@@ -70,10 +70,10 @@ class LinearDecayParameter:
 def get_running_reward(rewards: np.ndarray, window=100):
     """calculate the running reward, i.e. average of last `window` elements from rewards"""
     running_reward = np.zeros_like(rewards)
-    running_reward[:window] = rewards[:window]
-    for i in range(window, len(rewards)):
-        running_reward[i] = np.mean(rewards[i - window:i])
-        print(rewards[i - window:i], running_reward[i])
+    for i in range(window - 1):
+        running_reward[i] = np.mean(rewards[:i + 1])
+    for i in range(window - 1, len(rewards)):
+        running_reward[i] = np.mean(rewards[i - window + 1:i + 1])
     return running_reward
 
 

@@ -47,7 +47,7 @@ class MADDPG:
             state_list.append(transitions[0])
             act_list.append(transitions[1])
             next_state_list.append(transitions[3])
-            # calculate next_action using target_network and next_state, and result should be tensor
+            # calculate next_action using target_network and next_state, result should be tensor
             next_act_list.append(self.agents[agent].act(transitions[3], target=True, ndarray=False))
 
         # critic input all the states and actions
@@ -67,7 +67,8 @@ class MADDPG:
             agent.update_critic(critic_loss)
 
             # update actor
-            action = agent.act(states, ndarray=False)  # calculate action using actor
+            # action = agent.act(states, ndarray=False, detach=False, explore=False)  # calculate action using actor
+            action = agent.actor(states)  # calculate action using actor
             action_list = []
             for agent_name in self.agents.keys():  # loop over all the agents
                 if agent_name == name:  # action of the current agent is calculated using its actor

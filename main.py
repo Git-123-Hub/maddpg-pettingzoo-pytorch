@@ -1,5 +1,6 @@
 import argparse
 import os
+import pickle
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,12 +17,14 @@ if __name__ == '__main__':
                                  'comm'])
     parser.add_argument('--episode-num', type=int, default=5000,
                         help='total episode num during training procedure')
-    parser.add_argument('--learn-interval', type=int, default=10, help='steps interval between learning time')
-    parser.add_argument('--update-interval', type=int, default=30,
+    # todo: remove learn-interval
+    parser.add_argument('--learn-interval', type=int, default=1, help='steps interval between learning time')
+    parser.add_argument('--random-steps', type=int, default=200,
+                        help='random steps before the agent start to learn')
+    parser.add_argument('--update-interval', type=int, default=100,
                         help='step interval of updating target network')
     parser.add_argument('--tau', type=float, default=0.01, help='soft update parameter')
     args = parser.parse_args()
-    # todo: use continuous action or discrete action
     # todo: option on creating env
     env, env_name = get_env(args.env_name)
     # create folder to save result
@@ -47,7 +50,10 @@ if __name__ == '__main__':
         agent_reward = {agent: 0 for agent in env.agents}  # agent reward of the current episode
         while env.agents:  # interact with the env for an episode
             step += 1
-            actions = maddpg.select_action(states)
+            if step < args.random_steps:
+                actions = {agent_name: env.action_space(agent_name).sample() for agent_name in env.agents}
+            else:
+                actions = maddpg.select_action(states)
             next_states, rewards, dones, infos = env.step(actions)
             maddpg.add(states, actions, rewards, next_states, dones)
             states = next_states
@@ -55,8 +61,8 @@ if __name__ == '__main__':
             for agent, reward in rewards.items():  # update reward
                 agent_reward[agent] += reward
 
-            if step % args.learn_interval == 0:  # learn every few steps
-                maddpg.learn()
+            # if step % args.learn_interval == 0:  # learn every few steps
+            maddpg.learn()
 
             if step % args.update_interval == 0:  # update target network every few steps
                 maddpg.update_target(args.tau)
@@ -68,8 +74,14 @@ if __name__ == '__main__':
             message += f'{agent}: {reward:>4f}; '
         print(message)
 
-    maddpg.save(result_dir)
+    maddpg.save(result_dir)  # save model
 
+    with open(os.path.join(result_dir, 'rewards.pkl'), 'wb') as f:  # save training data
+        pickle.dump({'rewards': episode_rewards}, f)
+
+    # for agent in maddpg.agents.values():
+    #     get_model_para(agent.actor)
+    #     get_model_para(agent.critic)
     # training finishes, plot reward
     fig, ax = plt.subplots()
     x = range(1, args.episode_num + 1)
