@@ -38,7 +38,7 @@ class ReplayBuffer:
         next_states = self.next_state[indices]
         dones = self.done[indices]
 
-        def transfer(data, first_dim=False):
+        def transfer(data, first_dim=False, normalize=True):
             """
             transfer ndarray to torch.tensor,
             if `first_dim` is True, stack the ndarray so that the first dimension is `batch_size`,
@@ -46,7 +46,10 @@ class ReplayBuffer:
             """
             if first_dim:
                 data = np.vstack(data)
-            return torch.from_numpy(data).float()
+            data = torch.from_numpy(data).float()
+            if normalize:
+                data = (data - data.mean()) / (data.std() + 1e-7)
+            return data
 
         # NOTE that `states`, `actions`, `next_states` will be passed to network(nn.Module),
         # so the first dimension should be `batch_size`
@@ -54,7 +57,7 @@ class ReplayBuffer:
         actions = transfer(actions, first_dim=True)  # torch.Size([batch_size, action_dim])
         rewards = transfer(rewards)  # just a tensor with length: batch_size
         next_states = transfer(next_states, first_dim=True)  # Size([batch_size, state_dim])
-        dones = transfer(dones)  # just a tensor with length: batch_size
+        dones = transfer(dones, normalize=False)  # just a tensor with length: batch_size
 
         return states, actions, rewards, next_states, dones
 

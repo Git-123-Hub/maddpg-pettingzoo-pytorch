@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from MADDPG import MADDPG
 from util import LinearDecayParameter, get_running_reward, get_env
 
-# todo: random steps before learn
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -25,6 +24,8 @@ if __name__ == '__main__':
                         help='step interval of updating target network')
     parser.add_argument('--tau', type=float, default=0.01, help='soft update parameter')
     parser.add_argument('--gamma', type=float, default=0.95, help='discount factor')
+    parser.add_argument('--buffer-capacity', type=int, default=int(1e6), help='capacity of replay buffer')
+    parser.add_argument('--batch-size', type=int, default=1000, help='batch-size of replay buffer')
     args = parser.parse_args()
 
     env, env_name = get_env(args.env_name)
@@ -37,9 +38,10 @@ if __name__ == '__main__':
     os.makedirs(result_dir)
 
     env.reset()
-    maddpg = MADDPG(env)
+    maddpg = MADDPG(env, args.buffer_capacity, args.batch_size)
+
+    noise_scale = LinearDecayParameter(0, 1, args.episode_num * 0.95, 0, min_value=0)
     # no more noise exploration in the last 0.05 episodes
-    noise_scale = LinearDecayParameter(0, 0.5, args.episode_num * 0.95, 0, min_value=0)
 
     step = 0
     agent_num = env.num_agents
@@ -78,9 +80,6 @@ if __name__ == '__main__':
     with open(os.path.join(result_dir, 'rewards.pkl'), 'wb') as f:  # save training data
         pickle.dump({'rewards': episode_rewards}, f)
 
-    # for agent in maddpg.agents.values():
-    #     get_model_para(agent.actor)
-    #     get_model_para(agent.critic)
     # training finishes, plot reward
     fig, ax = plt.subplots()
     x = range(1, args.episode_num + 1)

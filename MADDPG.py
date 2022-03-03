@@ -13,7 +13,7 @@ from util import setup_logger
 class MADDPG:
     """A MADDPG(Multi Agent Deep Deterministic Policy Gradient) agent"""
 
-    def __init__(self, env: SimpleEnv):
+    def __init__(self, env: SimpleEnv, capacity, batch_size):
         # create agent according to all the agents of the env
         action_info = {}
         for agent in env.agents:
@@ -27,8 +27,7 @@ class MADDPG:
         # create Agent(actor-critic) and replay buffer for each agent
         self.agents = {}
         self.buffers = {}
-        # todo: option for replay buffer in args
-        self.capacity, self.batch_size = int(1e6), 1000
+        self.capacity, self.batch_size = capacity, batch_size
         for agent in env.agents:
             self.agents[agent] = Agent(*action_info[agent], global_obs_act_dim)
             self.buffers[agent] = ReplayBuffer(self.capacity, self.batch_size)
@@ -41,8 +40,7 @@ class MADDPG:
             return
 
         # sample from all the replay buffer using the same index
-        # todo: how to use batch size
-        indices = np.random.choice(total_num, size=256, replace=False)
+        indices = np.random.choice(total_num, size=self.batch_size, replace=False)
         samples = {}
         state_list, act_list, next_state_list, next_act_list = [], [], [], []
         for agent, buffer in self.buffers.items():
