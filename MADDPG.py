@@ -7,10 +7,11 @@ import torch.nn.functional as F
 
 from Agent import Agent
 from ReplayBuffer import ReplayBuffer
+from util import setup_logger
 
 
 class MADDPG:
-    """A MADDPG(Multi Agent Deep Deterministic Policy Gradient) agent that can interact with env"""
+    """A MADDPG(Multi Agent Deep Deterministic Policy Gradient) agent"""
 
     def __init__(self, env: SimpleEnv):
         # create agent according to all the agents of the env
@@ -21,21 +22,24 @@ class MADDPG:
             action_info[agent].append(env.action_space(agent).shape[0])
 
         # sum all the dims of each agent to get input dim for critic
-        global_obs_act_dim = sum(sum(val) for _, val in action_info.items())
+        global_obs_act_dim = sum(sum(val) for val in action_info.values())
 
         # create Agent(actor-critic) and replay buffer for each agent
         self.agents = {}
         self.buffers = {}
+        # todo: option for replay buffer in args
+        self.capacity, self.batch_size = int(1e6), 1000
         for agent in env.agents:
             self.agents[agent] = Agent(*action_info[agent], global_obs_act_dim)
-            # todo: option for replay buffer
-            self.buffers[agent] = ReplayBuffer(10000, 256)
+            self.buffers[agent] = ReplayBuffer(self.capacity, self.batch_size)
+        self.logger = setup_logger('maddpg.log', 'maddpg')
 
-    def learn(self):
+    def learn(self, gamma):
         # get the total num of transitions, these buffers should have same number of transitions
         total_num = len(list(self.buffers.values())[0])
-        if total_num <= 256:  # only start to learn when there are enough experiences to sample
+        if total_num <= self.batch_size:  # only start to learn when there are enough experiences to sample
             return
+
         # sample from all the replay buffer using the same index
         # todo: how to use batch size
         indices = np.random.choice(total_num, size=256, replace=False)
@@ -56,13 +60,12 @@ class MADDPG:
         target_critic_in = torch.cat(next_state_list + next_act_list, 1)
 
         # update all agents
-        for name, agent in self.agents.items():
+        for cur_agent_name, agent in self.agents.items():
             # update critic
-            states, actions, rewards, next_states, dones = samples[name]
-            # todo: specify gamma
+            states, actions, rewards, next_states, dones = samples[cur_agent_name]
             # todo: scale reward: 0.01
             critic_value = agent.critic_value(critic_in)  # tensor with the length of batch_size
-            target_value = rewards + 0.99 * agent.critic_value(target_critic_in, target=True) * (1 - dones)
+            target_value = rewards + gamma * agent.critic_value(target_critic_in, target=True) * (1 - dones)
             critic_loss = F.mse_loss(critic_value, target_value.detach(), reduction='mean')
             agent.update_critic(critic_loss)
 
@@ -71,7 +74,7 @@ class MADDPG:
             action = agent.actor(states)  # calculate action using actor
             action_list = []
             for agent_name in self.agents.keys():  # loop over all the agents
-                if agent_name == name:  # action of the current agent is calculated using its actor
+                if agent_name == cur_agent_name:  # action of the current agent is calculated using its actor
                     action_list.append(action)
                 else:  # action of other agents is from the samples
                     action_list.append(samples[agent_name][1])
@@ -79,6 +82,8 @@ class MADDPG:
             # actor_loss += (action ** 2).mean() * 1e-3  # todo: how to calculate loss of actor
             # actor_loss = -(action * critic_value).mean()
             agent.update_actor(actor_loss)
+            self.logger.info(f'{cur_agent_name}: critic loss: {critic_loss.item()}, '
+                             f'actor loss: {actor_loss.item()}')
 
     def scale_noise(self, scale):
         for agent in self.agents.values():

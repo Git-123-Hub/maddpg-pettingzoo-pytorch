@@ -17,18 +17,6 @@ class ReplayBuffer:
 
         self._index = 0  # current position for adding new experience
         self._size = 0  # record the number of the all the experiences stored
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    def reset(self):
-        """clear all the experience that has been stored, reset the replay memory"""
-        self.state.fill(0)
-        self.action.fill(0)
-        self.reward.fill(0)
-        self.next_state.fill(0)
-        self.done.fill(0)
-
-        self._index = 0
-        self._size = 0
 
     def add(self, state, action, reward, next_state, done):
         """ add an experience to the memory """
@@ -58,7 +46,7 @@ class ReplayBuffer:
             """
             if first_dim:
                 data = np.vstack(data)
-            return torch.from_numpy(data).float().to(self.device)
+            return torch.from_numpy(data).float()
 
         # NOTE that `states`, `actions`, `next_states` will be passed to network(nn.Module),
         # so the first dimension should be `batch_size`

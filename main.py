@@ -24,8 +24,9 @@ if __name__ == '__main__':
     parser.add_argument('--update-interval', type=int, default=100,
                         help='step interval of updating target network')
     parser.add_argument('--tau', type=float, default=0.01, help='soft update parameter')
+    parser.add_argument('--gamma', type=float, default=0.95, help='discount factor')
     args = parser.parse_args()
-    # todo: option on creating env
+
     env, env_name = get_env(args.env_name)
     # create folder to save result
     env_dir = os.path.join('./results', env_name)
@@ -62,8 +63,7 @@ if __name__ == '__main__':
                 agent_reward[agent] += reward
 
             # if step % args.learn_interval == 0:  # learn every few steps
-            maddpg.learn()
-
+            maddpg.learn(args.gamma)
             if step % args.update_interval == 0:  # update target network every few steps
                 maddpg.update_target(args.tau)
 
@@ -75,7 +75,6 @@ if __name__ == '__main__':
         print(message)
 
     maddpg.save(result_dir)  # save model
-
     with open(os.path.join(result_dir, 'rewards.pkl'), 'wb') as f:  # save training data
         pickle.dump({'rewards': episode_rewards}, f)
 

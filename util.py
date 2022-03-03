@@ -1,7 +1,30 @@
+import logging
+
 import numpy as np
 from matplotlib import pyplot as plt
 from pettingzoo.mpe import simple_adversary_v2, simple_crypto_v2, simple_push_v2, simple_reference_v2, \
     simple_speaker_listener_v3, simple_spread_v2, simple_tag_v2, simple_world_comm_v2
+
+
+def setup_logger(filename, name=__name__):
+    """
+    set up logger with filename and logger name.
+    :param filename: file to store the log data
+    :param name: specify name for logger for distinguish
+    :return: logger
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    handler = logging.FileHandler(filename, mode='w')
+    handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s--%(name)s--%(levelname)s--%(message)s',
+                                  datefmt='%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    return logger
 
 
 def get_env(name):

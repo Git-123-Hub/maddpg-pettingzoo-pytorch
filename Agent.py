@@ -25,7 +25,6 @@ class Agent:
         if isinstance(state, np.ndarray):
             state = torch.from_numpy(state).unsqueeze(0)  # torch.Size([1, state_size])
         if target:  # use target network to get target action
-            # todo: should target act add noise ????
             action = self.target_actor(state)  # torch.Size([1, action_size])
         else:
             action = self.actor(state)  # torch.Size([1, action_size])
