@@ -13,7 +13,7 @@ from util import setup_logger
 class MADDPG:
     """A MADDPG(Multi Agent Deep Deterministic Policy Gradient) agent"""
 
-    def __init__(self, env: SimpleEnv, capacity, batch_size):
+    def __init__(self, env: SimpleEnv, capacity, batch_size, actor_lr, critic_lr):
         # create agent according to all the agents of the env
         action_info = {}
         for agent in env.agents:
@@ -27,11 +27,31 @@ class MADDPG:
         # create Agent(actor-critic) and replay buffer for each agent
         self.agents = {}
         self.buffers = {}
-        self.capacity, self.batch_size = capacity, batch_size
+        self.batch_size = batch_size
         for agent in env.agents:
-            self.agents[agent] = Agent(*action_info[agent], global_obs_act_dim)
-            self.buffers[agent] = ReplayBuffer(self.capacity, self.batch_size)
+            self.agents[agent] = Agent(*action_info[agent], global_obs_act_dim, actor_lr, critic_lr)
+            self.buffers[agent] = ReplayBuffer(capacity, self.batch_size)
         self.logger = setup_logger('maddpg.log', 'maddpg')
+
+    @classmethod
+    def init_from_file(cls, env, file):
+        """init maddpg using the model saved in `file`"""
+        # get env dimension info to initialize actor network
+        action_info = {}
+        for agent in env.agents:
+            action_info[agent] = []
+            action_info[agent].append(env.observation_space(agent).shape[0])
+            action_info[agent].append(env.action_space(agent).shape[0])
+
+        instance = cls(env, 0, 0, 0, 0)
+        # only actor are needed when evaluate
+        instance.agents = {}
+        for agent in env.agents:
+            instance.agents[agent] = Agent(*action_info[agent], 1, 0, 0)
+        data = torch.load(file)
+        for agent_name, agent in instance.agents.items():
+            agent.actor.load_state_dict(data[agent_name])
+        return instance
 
     def learn(self, gamma):
         # get the total num of transitions, these buffers should have same number of transitions
@@ -86,6 +106,7 @@ class MADDPG:
     def scale_noise(self, scale):
         for agent in self.agents.values():
             agent.noise.scale = scale
+            agent.noise_scale = scale
 
     def update_target(self, tau):
         for agent in self.agents.values():

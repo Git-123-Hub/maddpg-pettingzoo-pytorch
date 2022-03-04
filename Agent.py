@@ -9,19 +9,18 @@ from torch.optim import Adam
 class Agent:
     """Agent that can interact with environment from pettingzoo"""
 
-    def __init__(self, obs_dim, act_dim, global_obs_dim, lr=0.001):
-        # todo: add lr to args
+    def __init__(self, obs_dim, act_dim, global_obs_dim, actor_lr, critic_lr):
         self.actor = MLPNetwork(obs_dim, act_dim, last_layer=nn.Sigmoid())
         self.critic = MLPNetwork(global_obs_dim, 1)
-        self.actor_optimizer = Adam(self.actor.parameters(), lr=lr)
-        self.critic_optimizer = Adam(self.critic.parameters(), lr=lr)
+        self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         self.target_actor = deepcopy(self.actor)
         self.target_critic = deepcopy(self.critic)
         self.noise = OUNoise(act_dim)  # todo: option on ou-noise
+        self.noise_scale = 1
 
     # todo: more method on act, target act
     def act(self, state, *, target=False, ndarray=True, explore=True):
-        # todo: add noise
         if isinstance(state, np.ndarray):
             state = torch.from_numpy(state).unsqueeze(0)  # torch.Size([1, state_size])
         if target:  # use target network to get target action
@@ -29,7 +28,8 @@ class Agent:
         else:
             action = self.actor(state)  # torch.Size([1, action_size])
             if explore:
-                action += torch.from_numpy(self.noise.noise()).unsqueeze(0)
+                # action += torch.from_numpy(self.noise.noise()).unsqueeze(0)
+                action += torch.tensor(np.random.uniform(-1, 1)).unsqueeze(0) * self.noise_scale
                 action.clip_(0, 1)
 
         action = action.detach().squeeze(0)  # tensor of length: action_size

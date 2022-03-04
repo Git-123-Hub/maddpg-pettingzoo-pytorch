@@ -26,8 +26,9 @@ if __name__ == '__main__':
     gif_num = len([file for file in os.listdir(gif_dir)])  # current number of gif
 
     env.reset()
-    maddpg = MADDPG(env)
-    maddpg.load(os.path.join(model_dir, 'model.pt'))
+    # maddpg = MADDPG(env)
+    # maddpg.load(os.path.join(model_dir, 'model.pt'))
+    maddpg = MADDPG.init_from_file(env, os.path.join(model_dir, 'model.pt'))
 
     agent_num = env.num_agents
     # reward of each episode of each agent
@@ -38,6 +39,8 @@ if __name__ == '__main__':
         frame_list = []  # used to save gif
         while env.agents:  # interact with the env for an episode
             actions = maddpg.select_action(states, explore=False)
+            # actions['adversary_0'] = env.action_space('adversary_0').sample()
+            # actions['agent_0'] = env.action_space('agent_0').sample()
             next_states, rewards, dones, infos = env.step(actions)
             states = next_states
             frame_list.append(Image.fromarray(env.render(mode='rgb_array')))
