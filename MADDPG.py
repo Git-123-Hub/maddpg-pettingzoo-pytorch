@@ -108,6 +108,10 @@ class MADDPG:
             agent.noise.scale = scale
             agent.noise_scale = scale
 
+    def reset_noise(self):
+        for agent in self.agents.values():
+            agent.noise.reset()
+
     def update_target(self, tau):
         for agent in self.agents.values():
             agent.update_target(tau)
@@ -116,6 +120,7 @@ class MADDPG:
         actions = {}
         for agent, state in states.items():
             actions[agent] = self.agents[agent].act(state, explore=explore)
+            self.logger.info(f'{agent} action: {actions[agent]}')
         return actions
 
     def add(self, states, actions, rewards, next_states, dones):

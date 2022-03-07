@@ -28,8 +28,8 @@ class Agent:
         else:
             action = self.actor(state)  # torch.Size([1, action_size])
             if explore:
-                # action += torch.from_numpy(self.noise.noise()).unsqueeze(0)
-                action += torch.tensor(np.random.uniform(-1, 1)).unsqueeze(0) * self.noise_scale
+                action += torch.from_numpy(self.noise.noise()).unsqueeze(0)
+                # action += torch.tensor(np.random.uniform(-1, 1)).unsqueeze(0) * self.noise_scale
                 action.clip_(0, 1)
 
         action = action.detach().squeeze(0)  # tensor of length: action_size

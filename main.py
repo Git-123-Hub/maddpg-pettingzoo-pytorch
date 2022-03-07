@@ -40,9 +40,9 @@ if __name__ == '__main__':
     os.makedirs(result_dir)
 
     env.reset()
-    maddpg = MADDPG(env, args.buffer_capacity, args.batch_size)
+    maddpg = MADDPG(env, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr)
 
-    noise_scale = LinearDecayParameter(0, 1, args.episode_num * 0.95, 0, min_value=0)
+    noise_scale = LinearDecayParameter(args.episode_num * 0.1, 1, args.episode_num * 0.95, 0)
     # no more noise exploration in the last 0.05 episodes
 
     step = 0
@@ -51,6 +51,7 @@ if __name__ == '__main__':
     episode_rewards = {agent: np.zeros(args.episode_num) for agent in env.agents}
     for episode in range(args.episode_num):
         maddpg.scale_noise(noise_scale(episode))  # scale noise according to current episode num
+        maddpg.reset_noise()
         states = env.reset()
         agent_reward = {agent: 0 for agent in env.agents}  # agent reward of the current episode
         while env.agents:  # interact with the env for an episode
