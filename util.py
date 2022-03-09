@@ -27,25 +27,25 @@ def setup_logger(filename, name=__name__):
     return logger
 
 
-def get_env(name):
+def get_env(name, continuous):
     """create env and return it with its full name"""
-    # NOTE that all the env use default setting, except the actions are continuous
     if name == 'adversary':
-        return simple_adversary_v2.parallel_env(continuous_actions=True), 'simple_adversary_v2'
+        return simple_adversary_v2.parallel_env(continuous_actions=continuous), 'simple_adversary_v2'
     if name == 'crypto':
-        return simple_crypto_v2.parallel_env(continuous_actions=True), 'simple_crypto_v2'
+        return simple_crypto_v2.parallel_env(continuous_actions=continuous), 'simple_crypto_v2'
     if name == 'push':
-        return simple_push_v2.parallel_env(continuous_actions=True), 'simple_push_v2'
+        return simple_push_v2.parallel_env(continuous_actions=continuous), 'simple_push_v2'
     if name == 'reference':
-        return simple_reference_v2.parallel_env(continuous_actions=True), 'simple_reference_v2'
+        return simple_reference_v2.parallel_env(continuous_actions=continuous), 'simple_reference_v2'
     if name == 'speaker':
-        return simple_speaker_listener_v3.parallel_env(continuous_actions=True), 'simple_speaker_listener_v3'
+        return simple_speaker_listener_v3.parallel_env(continuous_actions=continuous), \
+               'simple_speaker_listener_v3'
     if name == 'spread':
-        return simple_spread_v2.parallel_env(continuous_actions=True), 'simple_spread_v2'
+        return simple_spread_v2.parallel_env(continuous_actions=continuous), 'simple_spread_v2'
     if name == 'tag':
-        return simple_tag_v2.parallel_env(continuous_actions=True), 'simple_tag_v2'
+        return simple_tag_v2.parallel_env(continuous_actions=continuous), 'simple_tag_v2'
     if name == 'comm':
-        return simple_world_comm_v2.parallel_env(continuous_actions=True), 'simple_world_comm_v2'
+        return simple_world_comm_v2.parallel_env(continuous_actions=continuous), 'simple_world_comm_v2'
 
 
 class LinearDecayParameter:

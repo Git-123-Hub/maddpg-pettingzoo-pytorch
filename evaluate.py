@@ -15,9 +15,10 @@ if __name__ == '__main__':
                                  'comm'])
     parser.add_argument('folder', type=str, default='1', help='name of the folder where model is saved')
     parser.add_argument('--episode-num', type=int, default=10, help='total episode num during evaluation')
+    parser.add_argument('--continuous', action='store_true', help='set action space to continuous')
     args = parser.parse_args()
 
-    env, env_name = get_env(args.env_name)
+    env, env_name = get_env(args.env_name, args.continuous)
     model_dir = os.path.join('./results', env_name, args.folder)
     assert os.path.exists(model_dir)
     gif_dir = os.path.join(model_dir, 'gif')
@@ -28,7 +29,7 @@ if __name__ == '__main__':
     env.reset()
     # maddpg = MADDPG(env)
     # maddpg.load(os.path.join(model_dir, 'model.pt'))
-    maddpg = MADDPG.init_from_file(env, os.path.join(model_dir, 'model.pt'))
+    maddpg = MADDPG.init_from_file(env, os.path.join(model_dir, 'model.pt'), args.continuous)
 
     agent_num = env.num_agents
     # reward of each episode of each agent
@@ -41,6 +42,12 @@ if __name__ == '__main__':
             actions = maddpg.select_action(states, explore=False)
             # actions['adversary_0'] = env.action_space('adversary_0').sample()
             # actions['agent_0'] = env.action_space('agent_0').sample()
+
+            # convert onehot to int if necessary
+            if not args.continuous and not isinstance(actions['agent_0'], int):  # discrete action
+                for name in actions.keys():  # the action is ont-hot, we have to convert it
+                    actions[name] = actions[name].argmax().item()
+
             next_states, rewards, dones, infos = env.step(actions)
             states = next_states
             frame_list.append(Image.fromarray(env.render(mode='rgb_array')))

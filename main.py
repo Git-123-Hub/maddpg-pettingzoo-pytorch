@@ -14,10 +14,11 @@ if __name__ == '__main__':
     parser.add_argument('env_name', type=str, default='adversary', help='name of the env',
                         choices=['adversary', 'crypto', 'push', 'reference', 'speaker', 'spread', 'tag',
                                  'comm'])
-    parser.add_argument('--episode-num', type=int, default=1000,
+    parser.add_argument('--episode-num', type=int, default=500,
                         help='total episode num during training procedure')
     # todo: remove learn-interval
-    parser.add_argument('--learn-interval', type=int, default=1, help='steps interval between learning time')
+    parser.add_argument('--learn-interval', type=int, default=100,
+                        help='steps interval between learning time')
     parser.add_argument('--random-steps', type=int, default=500,
                         help='random steps before the agent start to learn')
     parser.add_argument('--update-interval', type=int, default=100,
@@ -28,9 +29,11 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=1000, help='batch-size of replay buffer')
     parser.add_argument('--actor-lr', type=float, default=0.01, help='learning rate of actor')
     parser.add_argument('--critic-lr', type=float, default=0.01, help='learning rate of critic')
+    # default action space: discrete
+    parser.add_argument('--continuous', action='store_true', help='set action space to continuous')
     args = parser.parse_args()
 
-    env, env_name = get_env(args.env_name)
+    env, env_name = get_env(args.env_name, args.continuous)
     # create folder to save result
     env_dir = os.path.join('./results', env_name)
     if not os.path.exists(env_dir):
@@ -42,7 +45,7 @@ if __name__ == '__main__':
     env.reset()
     maddpg = MADDPG(env, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr)
 
-    noise_scale = LinearDecayParameter(args.episode_num * 0.1, 1, args.episode_num * 0.95, 0)
+    noise_scale = LinearDecayParameter(args.episode_num * 0.1, 0.3, args.episode_num * 0.95, 0)
     # no more noise exploration in the last 0.05 episodes
 
     step = 0
@@ -60,7 +63,22 @@ if __name__ == '__main__':
                 actions = {agent_name: env.action_space(agent_name).sample() for agent_name in env.agents}
             else:
                 actions = maddpg.select_action(states)
+
+            # convert onehot to int if necessary
+            if not args.continuous and not isinstance(actions['agent_0'], int):  # discrete action
+                for name in actions.keys():  # the action is ont-hot, we have to convert it
+                    actions[name] = actions[name].argmax().item()
+
             next_states, rewards, dones, infos = env.step(actions)
+            # env.render()
+
+            # convert int to onehot
+            if not args.continuous and isinstance(actions['agent_0'], int):
+                for name in actions.keys():
+                    ac = np.zeros(env.action_space('agent_0').n)
+                    ac[actions[name]] = 1
+                    actions[name] = ac
+
             maddpg.add(states, actions, rewards, next_states, dones)
             states = next_states
 

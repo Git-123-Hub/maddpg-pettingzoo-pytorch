@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import torch
+from gym.spaces import Box
 from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv
 import torch.nn.functional as F
 
@@ -14,12 +15,19 @@ class MADDPG:
     """A MADDPG(Multi Agent Deep Deterministic Policy Gradient) agent"""
 
     def __init__(self, env: SimpleEnv, capacity, batch_size, actor_lr, critic_lr):
+        continuous = False  # default: discrete
+        if isinstance(env.action_space('agent_0'), Box):
+            continuous = True
+
         # create agent according to all the agents of the env
         action_info = {}
         for agent in env.agents:
             action_info[agent] = []
             action_info[agent].append(env.observation_space(agent).shape[0])
-            action_info[agent].append(env.action_space(agent).shape[0])
+            if continuous:
+                action_info[agent].append(env.action_space(agent).shape[0])
+            else:
+                action_info[agent].append(env.action_space(agent).n)
 
         # sum all the dims of each agent to get input dim for critic
         global_obs_act_dim = sum(sum(val) for val in action_info.values())
@@ -29,25 +37,29 @@ class MADDPG:
         self.buffers = {}
         self.batch_size = batch_size
         for agent in env.agents:
-            self.agents[agent] = Agent(*action_info[agent], global_obs_act_dim, actor_lr, critic_lr)
+            self.agents[agent] = Agent(*action_info[agent], global_obs_act_dim, actor_lr, critic_lr,
+                                       continuous)
             self.buffers[agent] = ReplayBuffer(capacity, self.batch_size)
         self.logger = setup_logger('maddpg.log', 'maddpg')
 
     @classmethod
-    def init_from_file(cls, env, file):
+    def init_from_file(cls, env, file, continuous):
         """init maddpg using the model saved in `file`"""
         # get env dimension info to initialize actor network
         action_info = {}
         for agent in env.agents:
             action_info[agent] = []
             action_info[agent].append(env.observation_space(agent).shape[0])
-            action_info[agent].append(env.action_space(agent).shape[0])
+            if continuous:
+                action_info[agent].append(env.action_space(agent).shape[0])
+            else:
+                action_info[agent].append(env.action_space(agent).n)
 
         instance = cls(env, 0, 0, 0, 0)
         # only actor are needed when evaluate
         instance.agents = {}
         for agent in env.agents:
-            instance.agents[agent] = Agent(*action_info[agent], 1, 0, 0)
+            instance.agents[agent] = Agent(*action_info[agent], 1, 0, 0, continuous)
         data = torch.load(file)
         for agent_name, agent in instance.agents.items():
             agent.actor.load_state_dict(data[agent_name])
@@ -88,8 +100,9 @@ class MADDPG:
             agent.update_critic(critic_loss)
 
             # update actor
-            # action = agent.act(states, ndarray=False, detach=False, explore=False)  # calculate action using actor
             action = agent.actor(states)  # calculate action using actor
+            action = F.gumbel_softmax(action, hard=True)
+
             action_list = []
             for agent_name in self.agents.keys():  # loop over all the agents
                 if agent_name == cur_agent_name:  # action of the current agent is calculated using its actor
