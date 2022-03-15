@@ -45,7 +45,7 @@ class Agent:
         else:
             # choose action with the biggest actor_output(logit)
             max_index = action.max(dim=1)[1]
-            action = one_hot(max_index)
+            action = one_hot(max_index, num_classes=action.size(1))
         return action  # onehot tensor with size: torch.Size([batch_size, action_size])
 
     def target_action(self, state):
@@ -57,7 +57,7 @@ class Agent:
         # NOTE that I didn't use noise during this procedure
         # so I just choose action with the biggest actor_output(logit)
         max_index = action.max(dim=1)[1]
-        action = one_hot(max_index).detach()
+        action = one_hot(max_index, num_classes=action.size(1)).detach()
         return action  # onehot tensor with size: torch.Size([batch_size, action_size])
 
     def _critic_value(self, x, *, target=False):

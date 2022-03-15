@@ -38,7 +38,7 @@ class ReplayBuffer:
         next_states = self.next_state[indices]
         dones = self.done[indices]
 
-        def transfer(data, first_dim=False, normalize=True):
+        def transfer(data, first_dim=False, normalize=False):
             """
             transfer ndarray to torch.tensor,
             if `first_dim` is True, stack the ndarray so that the first dimension is `batch_size`,
