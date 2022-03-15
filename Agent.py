@@ -1,9 +1,10 @@
 from copy import deepcopy
+from typing import List
 
 import numpy as np
 import torch
-from torch import nn
-from torch.nn.functional import gumbel_softmax
+from torch import nn, Tensor
+from torch.nn.functional import gumbel_softmax, one_hot
 from torch.optim import Adam
 
 
@@ -16,6 +17,8 @@ class Agent:
         else:  # the actor output will be logit of each action
             self.actor = MLPNetwork(obs_dim, act_dim)
 
+        # critic input all the states and actions
+        # if there are 3 agents for example, the input for critic is (obs1, obs2, obs3, act1, act2, act3)
         self.critic = MLPNetwork(global_obs_dim, 1)
         self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
@@ -25,42 +28,49 @@ class Agent:
         self.noise_scale = 1
         self.continuous = continuous
 
-    # todo: more method on act, target act
-    def act(self, state, *, target=False, ndarray=True, explore=True):
+    # todo: change method `action` and `target_action` to continuous domains
+    def action(self, state, *, explore):
+        # this method is called in the following two cases:
+        # a) interact with the environment, where input is a numpy.ndarray
+        # NOTE that the output is a tensor, you have to convert it to ndarray before input to the environment
+        # b) when update actor, calculate action using actor and states,
+        # which is sampled from replay buffer with size: torch.Size([batch_size, state_dim])
+
         if isinstance(state, np.ndarray):
             state = torch.from_numpy(state).unsqueeze(0)  # torch.Size([1, state_size])
-        if target:  # use target network to get target action
-            action = self.target_actor(state)  # torch.Size([1, action_size])
+        action = self.actor(state)  # torch.Size([batch_size, action_size])
+        if explore:
+            action = gumbel_softmax(action, hard=True)
+            # if hard=True, the returned samples will be discretized as one-hot vectors
         else:
-            action = self.actor(state)  # torch.Size([1, action_size])
+            # choose action with the biggest actor_output(logit)
+            max_index = action.max(dim=1)[1]
+            action = one_hot(max_index)
+        return action  # onehot tensor with size: torch.Size([batch_size, action_size])
 
-        if self.continuous:  # actor directly output action
-            if explore:
-                action += torch.from_numpy(self.noise.noise()).unsqueeze(0)
-                # action += torch.tensor(np.random.uniform(-1, 1)).unsqueeze(0) * self.noise_scale
-            action.clip_(0, 1)
-        else:  # actor output prob of each action
-            if explore:
-                action = gumbel_softmax(action, hard=True)
-                # if hard=True, the returned samples will be discretized as one-hot vectors
-            else:
-                # choose action with the biggest actor_output(logit)， convert logit to onehot
-                action = action.squeeze(0)
-                action_index = action.argmax().item()
-                action.fill_(0)
-                action[action_index] = 1
+    def target_action(self, state):
+        # when calculate target critic value in MADDPG,
+        # we use target actor to get next action given next states,
+        # which is sampled from replay buffer with size torch.Size([batch_size, state_dim])
 
-        action = action.detach().squeeze(0)  # tensor of length: action_size
-        if ndarray:
-            return action.numpy()  # ndarray of length: action_size
-        else:
-            return action
+        action = self.target_actor(state)  # torch.Size([batch_size, action_size])
+        # NOTE that I didn't use noise during this procedure
+        # so I just choose action with the biggest actor_output(logit)
+        max_index = action.max(dim=1)[1]
+        action = one_hot(max_index).detach()
+        return action  # onehot tensor with size: torch.Size([batch_size, action_size])
 
-    def critic_value(self, x, *, target=False):
+    def _critic_value(self, x, *, target=False):
         if target:
             return self.target_critic(x).squeeze(1)  # tensor with length of batch_size
         else:
             return self.critic(x).squeeze(1)
+
+    def critic_value(self, state_list: List[Tensor], act_list: List[Tensor]):
+        return self._critic_value(torch.cat(state_list + act_list, 1), target=False)
+
+    def target_critic_value(self, state_list: List[Tensor], act_list: List[Tensor]):
+        return self._critic_value(torch.cat(state_list + act_list, 1), target=True)
 
     def update_actor(self, loss):
         self.actor_optimizer.zero_grad()
