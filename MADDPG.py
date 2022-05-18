@@ -8,24 +8,18 @@ from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv
 import torch.nn.functional as F
 
 from Agent import Agent
-from ReplayBuffer import ReplayBuffer
+from Buffer import Buffer
 
 
-def setup_logger(filename, name=__name__):
-    """
-    set up logger with filename and logger name.
-    :param filename: file to store the log data
-    :param name: specify name for logger for distinguish
-    :return: logger
-    """
-    logger = logging.getLogger(name)
+def setup_logger(filename):
+    """ set up logger with filename. """
+    logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
     handler = logging.FileHandler(filename, mode='w')
     handler.setLevel(logging.INFO)
 
-    formatter = logging.Formatter('%(asctime)s--%(name)s--%(levelname)s--%(message)s',
-                                  datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = logging.Formatter('%(asctime)s--%(levelname)s--%(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
 
     logger.addHandler(handler)
@@ -43,7 +37,7 @@ class MADDPG:
         # create agent according to all the agents of the env
         action_info = {}
         for agent in env.agents:
-            action_info[agent] = []
+            action_info[agent] = []  # [obs_dim, act_dim]
             action_info[agent].append(env.observation_space(agent).shape[0])
             if continuous:
                 action_info[agent].append(env.action_space(agent).shape[0])
@@ -58,10 +52,10 @@ class MADDPG:
         self.buffers = {}
         self.batch_size = batch_size
         for agent in env.agents:
-            self.agents[agent] = Agent(*action_info[agent], global_obs_act_dim, actor_lr, critic_lr,
-                                       continuous)
-            self.buffers[agent] = ReplayBuffer(capacity, self.batch_size)
-        self.logger = setup_logger('maddpg.log', 'maddpg')
+            obs_dim, act_dim = action_info[agent]
+            self.agents[agent] = Agent(obs_dim, act_dim, global_obs_act_dim, actor_lr, critic_lr, continuous)
+            self.buffers[agent] = Buffer(capacity, obs_dim, act_dim, 'cpu')
+        self.logger = setup_logger('maddpg.log')
 
     @classmethod
     def init_from_file(cls, env, file, continuous):
