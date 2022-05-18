@@ -1,5 +1,6 @@
-torch==1.10.2
-PettingZoo[mpe]==1.15.0
-numpy==1.21.5
-matplotlib==3.5.1
-Pillow==9.0.1
+torch==1.11.0
+PettingZoo[mpe]==1.18.1
+numpy==1.22.3
+matplotlib==3.5.2
+Pillow==9.1.1
+gym==0.23.1

@@ -1,30 +1,6 @@
-import logging
-
-import numpy as np
 from matplotlib import pyplot as plt
 from pettingzoo.mpe import simple_adversary_v2, simple_crypto_v2, simple_push_v2, simple_reference_v2, \
     simple_speaker_listener_v3, simple_spread_v2, simple_tag_v2, simple_world_comm_v2
-
-
-def setup_logger(filename, name=__name__):
-    """
-    set up logger with filename and logger name.
-    :param filename: file to store the log data
-    :param name: specify name for logger for distinguish
-    :return: logger
-    """
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-
-    handler = logging.FileHandler(filename, mode='w')
-    handler.setLevel(logging.INFO)
-
-    formatter = logging.Formatter('%(asctime)s--%(name)s--%(levelname)s--%(message)s',
-                                  datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-
-    logger.addHandler(handler)
-    return logger
 
 
 def get_env(name, continuous):
@@ -85,16 +61,6 @@ class LinearDecayParameter:
         fig, ax = plt.subplots()
         ax.plot(x_values, y_values)
         plt.show()
-
-
-def get_running_reward(rewards: np.ndarray, window=100):
-    """calculate the running reward, i.e. average of last `window` elements from rewards"""
-    running_reward = np.zeros_like(rewards)
-    for i in range(window - 1):
-        running_reward[i] = np.mean(rewards[:i + 1])
-    for i in range(window - 1, len(rewards)):
-        running_reward[i] = np.mean(rewards[i - window + 1:i + 1])
-    return running_reward
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from MADDPG import MADDPG
-from util import LinearDecayParameter, get_running_reward, get_env
+from util import LinearDecayParameter, get_env
 
 
 if __name__ == '__main__':
@@ -16,7 +16,6 @@ if __name__ == '__main__':
                                  'comm'])
     parser.add_argument('--episode-num', type=int, default=500,
                         help='total episode num during training procedure')
-    # todo: remove learn-interval
     parser.add_argument('--learn-interval', type=int, default=100,
                         help='steps interval between learning time')
     parser.add_argument('--random-steps', type=int, default=500,
@@ -107,7 +106,19 @@ if __name__ == '__main__':
     with open(os.path.join(result_dir, 'rewards.pkl'), 'wb') as f:  # save training data
         pickle.dump({'rewards': episode_rewards}, f)
 
+
     # training finishes, plot reward
+
+    def get_running_reward(arr: np.ndarray, window=100):
+        """calculate the running reward, i.e. average of last `window` elements from rewards"""
+        running_reward = np.zeros_like(arr)
+        for i in range(window - 1):
+            running_reward[i] = np.mean(arr[:i + 1])
+        for i in range(window - 1, len(arr)):
+            running_reward[i] = np.mean(arr[i - window + 1:i + 1])
+        return running_reward
+
+
     fig, ax = plt.subplots()
     x = range(1, args.episode_num + 1)
     for agent, rewards in episode_rewards.items():

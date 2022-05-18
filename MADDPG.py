@@ -1,3 +1,4 @@
+import logging
 import os
 
 import numpy as np
@@ -8,7 +9,27 @@ import torch.nn.functional as F
 
 from Agent import Agent
 from ReplayBuffer import ReplayBuffer
-from util import setup_logger
+
+
+def setup_logger(filename, name=__name__):
+    """
+    set up logger with filename and logger name.
+    :param filename: file to store the log data
+    :param name: specify name for logger for distinguish
+    :return: logger
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    handler = logging.FileHandler(filename, mode='w')
+    handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s--%(name)s--%(levelname)s--%(message)s',
+                                  datefmt='%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    return logger
 
 
 class MADDPG:
