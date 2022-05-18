@@ -3,9 +3,9 @@ import os
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from gym.spaces import Box
 from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv
-import torch.nn.functional as F
 
 from Agent import Agent
 from Buffer import Buffer
@@ -136,25 +136,14 @@ class MADDPG:
             agent.noise.reset()
 
     def update_target(self, tau):
+        def soft_update(from_network, to_network):
+            """ copy the parameters of `from_network` to `to_network` with a proportion of tau"""
+            for from_p, to_p in zip(from_network.parameters(), to_network.parameters()):
+                to_p.data.copy_(tau * from_p.data + (1.0 - tau) * to_p.data)
+
         for agent in self.agents.values():
-            agent.update_target(tau)
-
-    def select_action(self, states, explore=True):
-        actions = {}
-        for agent, state in states.items():
-            action = self.agents[agent].action(state, explore=explore)  # torch.Size([1, action_size])
-            actions[agent] = action.squeeze(0).detach().numpy()
-            self.logger.info(f'{agent} action: {actions[agent]}')
-        return actions
-
-    def add(self, states, actions, rewards, next_states, dones):
-        for agent in states.keys():
-            state = states[agent]
-            action = actions[agent]
-            reward = rewards[agent]
-            next_state = next_states[agent]
-            done = dones[agent]
-            self.buffers[agent].add(state, action, reward, next_state, done)
+            soft_update(agent.actor, agent.target_actor)
+            soft_update(agent.critic, agent.target_critic)
 
     def save(self, folder):
         """save actor parameter of all agents"""
