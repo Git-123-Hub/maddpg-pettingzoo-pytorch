@@ -63,26 +63,8 @@ if __name__ == '__main__':
             else:
                 actions = maddpg.select_action(states)
 
-            # NOTE that the env with discrete action space can only receive int as an action
-            # but our agent get action as onehot vector
-            # so it's necessary to convert action to int and pass to environment
-            # then convert it back to save in buffer
-            # todo: using wrapper to modify this environment
-
-            # convert onehot to int if necessary
-            if not args.continuous and not isinstance(actions['agent_0'], int):  # discrete action
-                for name in actions.keys():  # the action is ont-hot, we have to convert it
-                    actions[name] = actions[name].argmax().item()
-
             next_states, rewards, dones, infos = env.step(actions)
             # env.render()
-
-            # convert int to onehot
-            if not args.continuous and isinstance(actions['agent_0'], int):
-                for name in actions.keys():
-                    ac = np.zeros(env.action_space('agent_0').n)
-                    ac[actions[name]] = 1
-                    actions[name] = ac
 
             maddpg.add(states, actions, rewards, next_states, dones)
             states = next_states

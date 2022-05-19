@@ -39,7 +39,7 @@ if __name__ == '__main__':
         agent_reward = {agent: 0 for agent in env.agents}  # agent reward of the current episode
         frame_list = []  # used to save gif
         while env.agents:  # interact with the env for an episode
-            actions = maddpg.select_action(states, explore=False)
+            actions = maddpg.select_action(states)
             # actions['adversary_0'] = env.action_space('adversary_0').sample()
             # actions['agent_0'] = env.action_space('agent_0').sample()
 

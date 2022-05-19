@@ -44,7 +44,8 @@ class Agent:
         # torch.Size([batch_size, state_dim])
 
         logits = self.actor(obs)  # torch.Size([batch_size, action_size])
-        action = self.gumbel_softmax(logits)
+        # action = self.gumbel_softmax(logits)
+        action = F.gumbel_softmax(logits, hard=True)
         # if model_out:
         #     return action, logits
         return action
@@ -55,7 +56,8 @@ class Agent:
         # which is sampled from replay buffer with size torch.Size([batch_size, state_dim])
 
         logits = self.target_actor(obs)  # torch.Size([batch_size, action_size])
-        action = self.gumbel_softmax(logits)
+        # action = self.gumbel_softmax(logits)
+        action = F.gumbel_softmax(logits, hard=True)
         return action.squeeze(0).detach()
 
     def critic_value(self, state_list: List[Tensor], act_list: List[Tensor]):

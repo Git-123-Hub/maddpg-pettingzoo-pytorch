@@ -35,27 +35,29 @@ class MADDPG:
             continuous = True
 
         # create agent according to all the agents of the env
-        action_info = {}
+        dim_info = {}
         for agent in env.agents:
-            action_info[agent] = []  # [obs_dim, act_dim]
-            action_info[agent].append(env.observation_space(agent).shape[0])
+            dim_info[agent] = []  # [obs_dim, act_dim]
+            dim_info[agent].append(env.observation_space(agent).shape[0])
             if continuous:
-                action_info[agent].append(env.action_space(agent).shape[0])
+                dim_info[agent].append(env.action_space(agent).shape[0])
             else:
-                action_info[agent].append(env.action_space(agent).n)
+                dim_info[agent].append(env.action_space(agent).n)
 
         # sum all the dims of each agent to get input dim for critic
-        global_obs_act_dim = sum(sum(val) for val in action_info.values())
+        global_obs_act_dim = sum(sum(val) for val in dim_info.values())
+        print(dim_info)
 
         # create Agent(actor-critic) and replay buffer for each agent
         self.agents = {}
         self.buffers = {}
         self.batch_size = batch_size
         for agent in env.agents:
-            obs_dim, act_dim = action_info[agent]
+            obs_dim, act_dim = dim_info[agent]
             self.agents[agent] = Agent(obs_dim, act_dim, global_obs_act_dim, actor_lr, critic_lr, continuous)
             self.buffers[agent] = Buffer(capacity, obs_dim, act_dim, 'cpu')
         self.logger = setup_logger('maddpg.log')
+        self.dim_info = dim_info
 
     @classmethod
     def init_from_file(cls, env, file, continuous):
@@ -79,6 +81,54 @@ class MADDPG:
         for agent_name, agent in instance.agents.items():
             agent.actor.load_state_dict(data[agent_name])
         return instance
+
+    def add(self, obs, action, reward, next_obs, done):
+        # NOTE that the experience is a dict with agent name as its key
+        for agent_id in obs.keys():
+            o = obs[agent_id]
+            a = action[agent_id]
+            if isinstance(a, int):
+                # the action from env.action_space.sample() is int, we have to convert it to onehot
+                a = np.eye(self.dim_info[agent_id][1])[a]
+
+            r = reward[agent_id]
+            next_o = next_obs[agent_id]
+            d = done[agent_id]
+            self.buffers[agent_id].add(o, a, r, next_o, d)
+
+    def sample(self, batch_size, agent_id):
+        """sample experience from all the agents' buffers, and collect data for network input"""
+        # get the total num of transitions, these buffers should have same number of transitions
+        total_num = len(self.buffers['agent_0'])
+        indices = np.random.choice(total_num, size=batch_size, replace=False)
+
+        # NOTE that in MADDPG, we need the obs and actions of all agents
+        # but only the reward and done of the current agent is needed in the calculation
+        obs_list, act_list, next_obs_list, next_act_list = [], [], [], []
+        reward_cur, done_cur, obs_cur = None, None, None
+        for a_id, buffer in self.buffers.items():
+            obs, action, reward, next_obs, done = buffer.sample(indices)
+            obs_list.append(obs)
+            act_list.append(action)
+            next_obs_list.append(next_obs)
+            # calculate next_action using target_network and next_state
+            next_act_list.append(self.agents[a_id].target_action(next_obs))
+            if a_id == agent_id:  # reward and done of the current agent
+                obs_cur = obs
+                reward_cur = reward
+                done_cur = done
+
+        return obs_list, act_list, reward_cur, next_obs_list, done_cur, next_act_list, obs_cur
+
+    def select_action(self, obs):
+        actions = {}
+        for agent, o in obs.items():
+            o = torch.from_numpy(o).unsqueeze(0).float()
+            a = self.agents[agent].action(o)  # torch.Size([1, action_size])
+            # NOTE that the output is a tensor, convert it to int before input to the environment
+            actions[agent] = a.squeeze(0).argmax().item()
+            self.logger.info(f'{agent} action: {actions[agent]}')
+        return actions
 
     def learn(self, gamma):
         # get the total num of transitions, these buffers should have same number of transitions
@@ -117,7 +167,7 @@ class MADDPG:
             for agent_name in self.agents.keys():  # loop over all the agents
                 if agent_name == cur_agent_name:  # action of the current agent is calculated using its actor
                     # todo: try with noise
-                    action = agent.action(states, explore=False)  # NOTE that NO noise
+                    action = agent.action(states)  # NOTE that NO noise
                 else:  # action of other agents is from the samples
                     action = samples[agent_name][1]
                 action_list.append(action)
