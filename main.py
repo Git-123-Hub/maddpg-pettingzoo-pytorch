@@ -4,39 +4,61 @@ import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
+from pettingzoo.mpe import simple_adversary_v2, simple_spread_v2, simple_tag_v2
 
 from MADDPG import MADDPG
-from util import get_env
+
+
+def get_env(env_name, ep_len=25):
+    """create environment and get observation and action dimension of each agent in this environment"""
+    new_env = None
+    if env_name == 'simple_adversary_v2':
+        new_env = simple_adversary_v2.parallel_env(max_cycles=ep_len)
+    if env_name == 'simple_spread_v2':
+        new_env = simple_spread_v2.parallel_env(max_cycles=ep_len)
+    if env_name == 'simple_tag_v2':
+        new_env = simple_tag_v2.parallel_env(max_cycles=ep_len)
+
+    new_env.reset()
+    _dim_info = {}
+    for agent_id in new_env.agents:
+        _dim_info[agent_id] = []  # [obs_dim, act_dim]
+        _dim_info[agent_id].append(new_env.observation_space(agent_id).shape[0])
+        _dim_info[agent_id].append(new_env.action_space(agent_id).n)
+
+    return new_env, _dim_info
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('env_name', type=str, default='adversary', help='name of the env',
-                        choices=['adversary', 'spread', 'tag'])
-    parser.add_argument('--episode-num', type=int, default=30000,
+    parser.add_argument('env_name', type=str, default='simple_adversary_v2', help='name of the env',
+                        choices=['simple_adversary_v2', 'simple_spread_v2', 'simple_tag_v2'])
+    parser.add_argument('--episode_num', type=int, default=30000,
                         help='total episode num during training procedure')
-    parser.add_argument('--learn-interval', type=int, default=100,
+    parser.add_argument('--episode_length', type=int, default=25, help='steps per episode')
+    parser.add_argument('--learn_interval', type=int, default=100,
                         help='steps interval between learning time')
-    parser.add_argument('--random-steps', type=int, default=5e4,
+    parser.add_argument('--random_steps', type=int, default=5e4,
                         help='random steps before the agent start to learn')
     parser.add_argument('--tau', type=float, default=0.02, help='soft update parameter')
     parser.add_argument('--gamma', type=float, default=0.95, help='discount factor')
-    parser.add_argument('--buffer-capacity', type=int, default=int(1e6), help='capacity of replay buffer')
-    parser.add_argument('--batch-size', type=int, default=1024, help='batch-size of replay buffer')
-    parser.add_argument('--actor-lr', type=float, default=0.01, help='learning rate of actor')
-    parser.add_argument('--critic-lr', type=float, default=0.01, help='learning rate of critic')
+    parser.add_argument('--buffer_capacity', type=int, default=int(1e6), help='capacity of replay buffer')
+    parser.add_argument('--batch_size', type=int, default=1024, help='batch-size of replay buffer')
+    parser.add_argument('--actor_lr', type=float, default=0.01, help='learning rate of actor')
+    parser.add_argument('--critic_lr', type=float, default=0.01, help='learning rate of critic')
     args = parser.parse_args()
 
-    env, env_name = get_env(args.env_name)
     # create folder to save result
-    env_dir = os.path.join('./results', env_name)
+    env_dir = os.path.join('./results', args.env_name)
     if not os.path.exists(env_dir):
         os.makedirs(env_dir)
     total_files = len([file for file in os.listdir(env_dir)])
     result_dir = os.path.join(env_dir, f'{total_files + 1}')
     os.makedirs(result_dir)
 
-    env.reset()
-    maddpg = MADDPG(env, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr, result_dir)
+    env, dim_info = get_env(args.env_name, args.episode_length)
+    maddpg = MADDPG(dim_info, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr,
+                    result_dir)
 
     step = 0  # global step counter
     agent_num = env.num_agents
@@ -78,9 +100,7 @@ if __name__ == '__main__':
             message += f'sum reward: {sum_reward}'
             print(message)
 
-    maddpg.save()  # save model
-    with open(os.path.join(result_dir, 'rewards.pkl'), 'wb') as f:  # save training data
-        pickle.dump({'rewards': episode_rewards}, f)
+    maddpg.save(episode_rewards)  # save model
 
 
     def get_running_reward(arr: np.ndarray, window=100):
@@ -102,6 +122,6 @@ if __name__ == '__main__':
     ax.legend()
     ax.set_xlabel('episode')
     ax.set_ylabel('reward')
-    title = f'training result of maddpg solve {env_name}'
+    title = f'training result of maddpg solve {args.env_name}'
     ax.set_title(title)
     plt.savefig(os.path.join(result_dir, title))

@@ -1,11 +1,10 @@
 import logging
 import os
+import pickle
 
 import numpy as np
 import torch
 import torch.nn.functional as F
-from gym.spaces import Box
-from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv
 
 from Agent import Agent
 from Buffer import Buffer
@@ -29,21 +28,13 @@ def setup_logger(filename):
 class MADDPG:
     """A MADDPG(Multi Agent Deep Deterministic Policy Gradient) agent"""
 
-    def __init__(self, env: SimpleEnv, capacity, batch_size, actor_lr, critic_lr, res_dir):
-        # create agent according to all the agents of the env
-        dim_info = {}
-        for agent_id in env.agents:
-            dim_info[agent_id] = []  # [obs_dim, act_dim]
-            dim_info[agent_id].append(env.observation_space(agent_id).shape[0])
-            dim_info[agent_id].append(env.action_space(agent_id).n)
-
+    def __init__(self, dim_info, capacity, batch_size, actor_lr, critic_lr, res_dir):
         # sum all the dims of each agent to get input dim for critic
         global_obs_act_dim = sum(sum(val) for val in dim_info.values())
         # create Agent(actor-critic) and replay buffer for each agent
         self.agents = {}
         self.buffers = {}
-        for agent_id in env.agents:
-            obs_dim, act_dim = dim_info[agent_id]
+        for agent_id, (obs_dim, act_dim) in dim_info.items():
             self.agents[agent_id] = Agent(obs_dim, act_dim, global_obs_act_dim, actor_lr, critic_lr)
             self.buffers[agent_id] = Buffer(capacity, obs_dim, act_dim, 'cpu')
         self.dim_info = dim_info
@@ -51,29 +42,6 @@ class MADDPG:
         self.batch_size = batch_size
         self.res_dir = res_dir  # directory to save the training result
         self.logger = setup_logger(os.path.join(res_dir, 'maddpg.log'))
-
-    @classmethod
-    def init_from_file(cls, env, file, continuous):
-        """init maddpg using the model saved in `file`"""
-        # get env dimension info to initialize actor network
-        action_info = {}
-        for agent in env.agents:
-            action_info[agent] = []
-            action_info[agent].append(env.observation_space(agent).shape[0])
-            if continuous:
-                action_info[agent].append(env.action_space(agent).shape[0])
-            else:
-                action_info[agent].append(env.action_space(agent).n)
-
-        instance = cls(env, 0, 0, 0, 0)
-        # only actor are needed when evaluate
-        instance.agents = {}
-        for agent in env.agents:
-            instance.agents[agent] = Agent(1, 0, 0, continuous, )
-        data = torch.load(file)
-        for agent_name, agent in instance.agents.items():
-            agent.actor.load_state_dict(data[agent_name])
-        return instance
 
     def add(self, obs, action, reward, next_obs, done):
         # NOTE that the experience is a dict with agent name as its key
@@ -153,13 +121,20 @@ class MADDPG:
             soft_update(agent.actor, agent.target_actor)
             soft_update(agent.critic, agent.target_critic)
 
-    def save(self):
-        """save actor parameter of all agents"""
-        data = {name: agent.actor.state_dict() for name, agent in self.agents.items()}  # actor parameter
-        data['dim_info'] = self.dim_info  # dim info for init the MADDPG
-        torch.save(data, os.path.join(self.res_dir, 'model.pt'))
+    def save(self, reward):
+        """save actor parameters of all agents and training reward to `res_dir`"""
+        torch.save(
+            {name: agent.actor.state_dict() for name, agent in self.agents.items()},  # actor parameter
+            os.path.join(self.res_dir, 'model.pt')
+        )
+        with open(os.path.join(self.res_dir, 'rewards.pkl'), 'wb') as f:  # save training data
+            pickle.dump({'rewards': reward}, f)
 
-    def load(self, filename):
-        data = torch.load(filename)
-        for agent_name, agent in self.agents.items():
-            agent.actor.load_state_dict(data[agent_name])
+    @classmethod
+    def load(cls, dim_info, file):
+        """init maddpg using the model saved in `file`"""
+        instance = cls(dim_info, 0, 0, 0, 0, os.path.dirname(file))
+        data = torch.load(file)
+        for agent_id, agent in instance.agents.items():
+            agent.actor.load_state_dict(data[agent_id])
+        return instance
