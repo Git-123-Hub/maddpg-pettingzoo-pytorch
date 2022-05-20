@@ -21,7 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--tau', type=float, default=0.02, help='soft update parameter')
     parser.add_argument('--gamma', type=float, default=0.95, help='discount factor')
     parser.add_argument('--buffer-capacity', type=int, default=int(1e6), help='capacity of replay buffer')
-    parser.add_argument('--batch-size', type=int, default=1000, help='batch-size of replay buffer')
+    parser.add_argument('--batch-size', type=int, default=1024, help='batch-size of replay buffer')
     parser.add_argument('--actor-lr', type=float, default=0.01, help='learning rate of actor')
     parser.add_argument('--critic-lr', type=float, default=0.01, help='learning rate of critic')
     args = parser.parse_args()

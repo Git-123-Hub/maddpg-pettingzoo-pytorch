@@ -74,19 +74,24 @@ class Agent:
 
 
 class MLPNetwork(nn.Module):
-    def __init__(self, in_dim, out_dim, hidden_dim=64, non_linear=nn.ReLU(), last_layer=None):
+    def __init__(self, in_dim, out_dim, hidden_dim=64, non_linear=nn.ReLU()):
         super(MLPNetwork, self).__init__()
 
-        modules = [
+        self.net = nn.Sequential(
             nn.Linear(in_dim, hidden_dim),
             non_linear,
             nn.Linear(hidden_dim, hidden_dim),
             non_linear,
             nn.Linear(hidden_dim, out_dim),
-        ]
-        if last_layer is not None:
-            modules.append(last_layer)
-        self.net = nn.Sequential(*modules)
+        ).apply(self.init)
+
+    @staticmethod
+    def init(m):
+        """init parameter of the module"""
+        gain = nn.init.calculate_gain('relu')
+        if isinstance(m, nn.Linear):
+            torch.nn.init.xavier_uniform_(m.weight, gain=gain)
+            m.bias.data.fill_(0.01)
 
     def forward(self, x):
         return self.net(x)

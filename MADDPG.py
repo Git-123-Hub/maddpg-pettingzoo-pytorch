@@ -155,10 +155,9 @@ class MADDPG:
 
     def save(self):
         """save actor parameter of all agents"""
-        torch.save(
-            {name: agent.actor.state_dict() for name, agent in self.agents.items()},
-            os.path.join(self.res_dir, 'model.pt')
-        )
+        data = {name: agent.actor.state_dict() for name, agent in self.agents.items()}  # actor parameter
+        data['dim_info'] = self.dim_info  # dim info for init the MADDPG
+        torch.save(data, os.path.join(self.res_dir, 'model.pt'))
 
     def load(self, filename):
         data = torch.load(filename)
