@@ -36,18 +36,13 @@ if __name__ == '__main__':
     os.makedirs(result_dir)
 
     env.reset()
-    maddpg = MADDPG(env, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr)
-
-    # noise_scale = LinearDecayParameter(args.episode_num * 0.1, 0.3, args.episode_num * 0.95, 0)
-    # no more noise exploration in the last 0.05 episodes
+    maddpg = MADDPG(env, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr, result_dir)
 
     step = 0  # global step counter
     agent_num = env.num_agents
     # reward of each episode of each agent
     episode_rewards = {agent_id: np.zeros(args.episode_num) for agent_id in env.agents}
     for episode in range(args.episode_num):
-        # maddpg.scale_noise(noise_scale(episode))  # scale noise according to current episode num
-        # maddpg.reset_noise()
         obs = env.reset()
         agent_reward = {agent_id: 0 for agent_id in env.agents}  # agent reward of the current episode
         while env.agents:  # interact with the env for an episode
@@ -83,7 +78,7 @@ if __name__ == '__main__':
             message += f'sum reward: {sum_reward}'
             print(message)
 
-    maddpg.save(result_dir)  # save model
+    maddpg.save()  # save model
     with open(os.path.join(result_dir, 'rewards.pkl'), 'wb') as f:  # save training data
         pickle.dump({'rewards': episode_rewards}, f)
 

@@ -1,21 +1,17 @@
 from copy import deepcopy
 from typing import List
 
-import numpy as np
 import torch
-from torch import nn, Tensor
 import torch.nn.functional as F
+from torch import nn, Tensor
 from torch.optim import Adam
 
 
 class Agent:
     """Agent that can interact with environment from pettingzoo"""
 
-    def __init__(self, obs_dim, act_dim, global_obs_dim, actor_lr, critic_lr, continuous):
-        if continuous:  # use last_layer to constrain output  # todo: change to Tanh
-            self.actor = MLPNetwork(obs_dim, act_dim, last_layer=nn.Sigmoid())
-        else:  # the actor output will be logit of each action
-            self.actor = MLPNetwork(obs_dim, act_dim)
+    def __init__(self, obs_dim, act_dim, global_obs_dim, actor_lr, critic_lr):
+        self.actor = MLPNetwork(obs_dim, act_dim)
 
         # critic input all the states and actions
         # if there are 3 agents for example, the input for critic is (obs1, obs2, obs3, act1, act2, act3)
@@ -24,9 +20,6 @@ class Agent:
         self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         self.target_actor = deepcopy(self.actor)
         self.target_critic = deepcopy(self.critic)
-        self.noise = OUNoise(act_dim)  # todo: option on ou-noise
-        self.noise_scale = 1
-        self.continuous = continuous
 
     @staticmethod
     def gumbel_softmax(logits, tau=1.0, eps=1e-20):
@@ -36,7 +29,6 @@ class Agent:
         logits += -torch.log(-torch.log(epsilon + eps) + eps)
         return F.softmax(logits / tau, dim=-1)
 
-    # todo: change method `action` and `target_action` to continuous domains
     def action(self, obs, model_out=False):
         # this method is called in the following two cases:
         # a) interact with the environment

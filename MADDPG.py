@@ -29,34 +29,28 @@ def setup_logger(filename):
 class MADDPG:
     """A MADDPG(Multi Agent Deep Deterministic Policy Gradient) agent"""
 
-    def __init__(self, env: SimpleEnv, capacity, batch_size, actor_lr, critic_lr):
-        continuous = False  # default: discrete
-        if isinstance(env.action_space('agent_0'), Box):
-            continuous = True
-
+    def __init__(self, env: SimpleEnv, capacity, batch_size, actor_lr, critic_lr, res_dir):
         # create agent according to all the agents of the env
         dim_info = {}
-        for agent in env.agents:
-            dim_info[agent] = []  # [obs_dim, act_dim]
-            dim_info[agent].append(env.observation_space(agent).shape[0])
-            if continuous:
-                dim_info[agent].append(env.action_space(agent).shape[0])
-            else:
-                dim_info[agent].append(env.action_space(agent).n)
+        for agent_id in env.agents:
+            dim_info[agent_id] = []  # [obs_dim, act_dim]
+            dim_info[agent_id].append(env.observation_space(agent_id).shape[0])
+            dim_info[agent_id].append(env.action_space(agent_id).n)
 
         # sum all the dims of each agent to get input dim for critic
         global_obs_act_dim = sum(sum(val) for val in dim_info.values())
-
         # create Agent(actor-critic) and replay buffer for each agent
         self.agents = {}
         self.buffers = {}
-        self.batch_size = batch_size
-        for agent in env.agents:
-            obs_dim, act_dim = dim_info[agent]
-            self.agents[agent] = Agent(obs_dim, act_dim, global_obs_act_dim, actor_lr, critic_lr, continuous)
-            self.buffers[agent] = Buffer(capacity, obs_dim, act_dim, 'cpu')
-        self.logger = setup_logger('maddpg.log')
+        for agent_id in env.agents:
+            obs_dim, act_dim = dim_info[agent_id]
+            self.agents[agent_id] = Agent(obs_dim, act_dim, global_obs_act_dim, actor_lr, critic_lr)
+            self.buffers[agent_id] = Buffer(capacity, obs_dim, act_dim, 'cpu')
         self.dim_info = dim_info
+
+        self.batch_size = batch_size
+        self.res_dir = res_dir  # directory to save the training result
+        self.logger = setup_logger(os.path.join(res_dir, 'maddpg.log'))
 
     @classmethod
     def init_from_file(cls, env, file, continuous):
@@ -75,7 +69,7 @@ class MADDPG:
         # only actor are needed when evaluate
         instance.agents = {}
         for agent in env.agents:
-            instance.agents[agent] = Agent(*action_info[agent], 1, 0, 0, continuous)
+            instance.agents[agent] = Agent(1, 0, 0, continuous, )
         data = torch.load(file)
         for agent_name, agent in instance.agents.items():
             agent.actor.load_state_dict(data[agent_name])
@@ -159,11 +153,11 @@ class MADDPG:
             soft_update(agent.actor, agent.target_actor)
             soft_update(agent.critic, agent.target_critic)
 
-    def save(self, folder):
+    def save(self):
         """save actor parameter of all agents"""
         torch.save(
             {name: agent.actor.state_dict() for name, agent in self.agents.items()},
-            os.path.join(folder, 'model.pt')
+            os.path.join(self.res_dir, 'model.pt')
         )
 
     def load(self, filename):
