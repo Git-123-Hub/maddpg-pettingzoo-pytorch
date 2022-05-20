@@ -37,7 +37,7 @@ class Agent:
         return F.softmax(logits / tau, dim=-1)
 
     # todo: change method `action` and `target_action` to continuous domains
-    def action(self, obs):
+    def action(self, obs, model_out=False):
         # this method is called in the following two cases:
         # a) interact with the environment
         # b) calculate action when update actor, where input(obs) is sampled from replay buffer with size:
@@ -46,8 +46,8 @@ class Agent:
         logits = self.actor(obs)  # torch.Size([batch_size, action_size])
         # action = self.gumbel_softmax(logits)
         action = F.gumbel_softmax(logits, hard=True)
-        # if model_out:
-        #     return action, logits
+        if model_out:
+            return action, logits
         return action
 
     def target_action(self, obs):

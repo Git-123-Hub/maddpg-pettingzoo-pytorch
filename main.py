@@ -46,12 +46,12 @@ if __name__ == '__main__':
     step = 0  # global step counter
     agent_num = env.num_agents
     # reward of each episode of each agent
-    episode_rewards = {agent: np.zeros(args.episode_num) for agent in env.agents}
+    episode_rewards = {agent_id: np.zeros(args.episode_num) for agent_id in env.agents}
     for episode in range(args.episode_num):
         # maddpg.scale_noise(noise_scale(episode))  # scale noise according to current episode num
         # maddpg.reset_noise()
         obs = env.reset()
-        agent_reward = {agent: 0 for agent in env.agents}  # agent reward of the current episode
+        agent_reward = {agent_id: 0 for agent_id in env.agents}  # agent reward of the current episode
         while env.agents:  # interact with the env for an episode
             step += 1
             if step < args.random_steps:
@@ -67,18 +67,24 @@ if __name__ == '__main__':
                 agent_reward[agent_id] += r
 
             if step >= args.random_steps and step % args.learn_interval == 0:  # learn every few steps
-                maddpg.learn(args.gamma)
+                maddpg.learn(args.batch_size, args.gamma)
                 maddpg.update_target(args.tau)
 
             obs = next_obs
 
         # episode finishes
-        # message = f'episode {episode + 1}, noise scale: {noise_scale(episode):>4f}, '
-        message = f'episode {episode + 1}, '
         for agent_id, r in agent_reward.items():  # record reward
             episode_rewards[agent_id][episode] = r
-            message += f'{agent_id}: {r:>4f}; '
-        print(message)
+
+        if (episode + 1) % 100 == 0:  # print info every 100 episodes
+            # message = f'episode {episode + 1}, noise scale: {noise_scale(episode):>4f}, '
+            message = f'episode {episode + 1}, '
+            sum_reward = 0
+            for agent_id, r in agent_reward.items():  # record reward
+                message += f'{agent_id}: {r:>4f}; '
+                sum_reward += r
+            message += f'sum reward: {sum_reward}'
+            print(message)
 
     maddpg.save(result_dir)  # save model
     with open(os.path.join(result_dir, 'rewards.pkl'), 'wb') as f:  # save training data

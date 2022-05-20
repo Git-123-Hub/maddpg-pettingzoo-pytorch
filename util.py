@@ -1,27 +1,15 @@
 from matplotlib import pyplot as plt
-from pettingzoo.mpe import simple_adversary_v2, simple_crypto_v2, simple_push_v2, simple_reference_v2, \
-    simple_speaker_listener_v3, simple_spread_v2, simple_tag_v2, simple_world_comm_v2
+from pettingzoo.mpe import simple_adversary_v2, simple_spread_v2, simple_tag_v2
 
 
-def get_env(name, continuous):
+def get_env(name, ep_len=25):
     """create env and return it with its full name"""
     if name == 'adversary':
-        return simple_adversary_v2.parallel_env(continuous_actions=continuous), 'simple_adversary_v2'
-    if name == 'crypto':
-        return simple_crypto_v2.parallel_env(continuous_actions=continuous), 'simple_crypto_v2'
-    if name == 'push':
-        return simple_push_v2.parallel_env(continuous_actions=continuous), 'simple_push_v2'
-    if name == 'reference':
-        return simple_reference_v2.parallel_env(continuous_actions=continuous), 'simple_reference_v2'
-    if name == 'speaker':
-        return simple_speaker_listener_v3.parallel_env(continuous_actions=continuous), \
-               'simple_speaker_listener_v3'
+        return simple_adversary_v2.parallel_env(max_cycles=ep_len), 'simple_adversary_v2'
     if name == 'spread':
-        return simple_spread_v2.parallel_env(continuous_actions=continuous), 'simple_spread_v2'
+        return simple_spread_v2.parallel_env(max_cycles=ep_len), 'simple_spread_v2'
     if name == 'tag':
-        return simple_tag_v2.parallel_env(continuous_actions=continuous), 'simple_tag_v2'
-    if name == 'comm':
-        return simple_world_comm_v2.parallel_env(continuous_actions=continuous), 'simple_world_comm_v2'
+        return simple_tag_v2.parallel_env(max_cycles=ep_len), 'simple_tag_v2'
 
 
 class LinearDecayParameter:

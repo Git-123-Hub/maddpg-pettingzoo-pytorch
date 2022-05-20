@@ -46,7 +46,6 @@ class MADDPG:
 
         # sum all the dims of each agent to get input dim for critic
         global_obs_act_dim = sum(sum(val) for val in dim_info.values())
-        print(dim_info)
 
         # create Agent(actor-critic) and replay buffer for each agent
         self.agents = {}
@@ -96,7 +95,7 @@ class MADDPG:
             d = done[agent_id]
             self.buffers[agent_id].add(o, a, r, next_o, d)
 
-    def sample(self, batch_size, agent_id):
+    def sample(self, batch_size):
         """sample experience from all the agents' buffers, and collect data for network input"""
         # get the total num of transitions, these buffers should have same number of transitions
         total_num = len(self.buffers['agent_0'])
@@ -104,21 +103,18 @@ class MADDPG:
 
         # NOTE that in MADDPG, we need the obs and actions of all agents
         # but only the reward and done of the current agent is needed in the calculation
-        obs_list, act_list, next_obs_list, next_act_list = [], [], [], []
-        reward_cur, done_cur, obs_cur = None, None, None
-        for a_id, buffer in self.buffers.items():
-            obs, action, reward, next_obs, done = buffer.sample(indices)
-            obs_list.append(obs)
-            act_list.append(action)
-            next_obs_list.append(next_obs)
+        obs, act, reward, next_obs, done, next_act = {}, {}, {}, {}, {}, {}
+        for agent_id, buffer in self.buffers.items():
+            o, a, r, n_o, d = buffer.sample(indices)
+            obs[agent_id] = o
+            act[agent_id] = a
+            reward[agent_id] = r
+            next_obs[agent_id] = n_o
+            done[agent_id] = d
             # calculate next_action using target_network and next_state
-            next_act_list.append(self.agents[a_id].target_action(next_obs))
-            if a_id == agent_id:  # reward and done of the current agent
-                obs_cur = obs
-                reward_cur = reward
-                done_cur = done
+            next_act[agent_id] = self.agents[agent_id].target_action(n_o)
 
-        return obs_list, act_list, reward_cur, next_obs_list, done_cur, next_act_list, obs_cur
+        return obs, act, reward, next_obs, done, next_act
 
     def select_action(self, obs):
         actions = {}
