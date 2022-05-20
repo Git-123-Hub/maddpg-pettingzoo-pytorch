@@ -12,14 +12,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('env_name', type=str, default='simple_adversary_v2', help='name of the env',
                         choices=['simple_adversary_v2', 'simple_spread_v2', 'simple_tag_v2'])
-    parser.add_argument('--folder', type=str, help='name of the folder where model is saved')
+    parser.add_argument('folder', type=str, help='name of the folder where model is saved')
     parser.add_argument('--episode-num', type=int, default=10, help='total episode num during evaluation')
-    parser.add_argument('--episode-length', type=int, default=25, help='steps per episode')
+    parser.add_argument('--episode-length', type=int, default=50, help='steps per episode')
 
     args = parser.parse_args()
-
-    if args.folder is None:
-        args.folder = input('input folder name: ')
 
     model_dir = os.path.join('./results', args.env_name, args.folder)
     assert os.path.exists(model_dir)
@@ -40,9 +37,6 @@ if __name__ == '__main__':
         frame_list = []  # used to save gif
         while env.agents:  # interact with the env for an episode
             actions = maddpg.select_action(states)
-            # actions['adversary_0'] = env.action_space('adversary_0').sample()
-            # actions['agent_0'] = env.action_space('agent_0').sample()
-
             next_states, rewards, dones, infos = env.step(actions)
             states = next_states
             frame_list.append(Image.fromarray(env.render(mode='rgb_array')))
