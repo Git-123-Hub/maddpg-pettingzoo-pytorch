@@ -13,12 +13,14 @@ if __name__ == '__main__':
     parser.add_argument('env_name', type=str, default='adversary', help='name of the env',
                         choices=['adversary', 'crypto', 'push', 'reference', 'speaker', 'spread', 'tag',
                                  'comm'])
-    parser.add_argument('folder', type=str, default='1', help='name of the folder where model is saved')
+    parser.add_argument('--folder', type=str, help='name of the folder where model is saved')
     parser.add_argument('--episode-num', type=int, default=10, help='total episode num during evaluation')
-    parser.add_argument('--continuous', action='store_true', help='set action space to continuous')
     args = parser.parse_args()
 
-    env, env_name = get_env(args.env_name, args.continuous)
+    if args.folder is None:
+        args.folder = input('input folder name: ')
+
+    env, env_name = get_env(args.env_name)
     model_dir = os.path.join('./results', env_name, args.folder)
     assert os.path.exists(model_dir)
     gif_dir = os.path.join(model_dir, 'gif')

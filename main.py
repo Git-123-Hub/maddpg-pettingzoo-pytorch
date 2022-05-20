@@ -24,11 +24,9 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=1000, help='batch-size of replay buffer')
     parser.add_argument('--actor-lr', type=float, default=0.01, help='learning rate of actor')
     parser.add_argument('--critic-lr', type=float, default=0.01, help='learning rate of critic')
-    # default action space: discrete
-    parser.add_argument('--continuous', action='store_true', help='set action space to continuous')
     args = parser.parse_args()
 
-    env, env_name = get_env(args.env_name, args.continuous)
+    env, env_name = get_env(args.env_name)
     # create folder to save result
     env_dir = os.path.join('./results', env_name)
     if not os.path.exists(env_dir):
@@ -77,7 +75,6 @@ if __name__ == '__main__':
             episode_rewards[agent_id][episode] = r
 
         if (episode + 1) % 100 == 0:  # print info every 100 episodes
-            # message = f'episode {episode + 1}, noise scale: {noise_scale(episode):>4f}, '
             message = f'episode {episode + 1}, '
             sum_reward = 0
             for agent_id, r in agent_reward.items():  # record reward
