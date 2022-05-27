@@ -38,17 +38,18 @@ if __name__ == '__main__':
         while env.agents:  # interact with the env for an episode
             actions = maddpg.select_action(states)
             next_states, rewards, dones, infos = env.step(actions)
-            states = next_states
             frame_list.append(Image.fromarray(env.render(mode='rgb_array')))
+            states = next_states
 
-            for agent, reward in rewards.items():  # update reward
-                agent_reward[agent] += reward
+            for agent_id, reward in rewards.items():  # update reward
+                agent_reward[agent_id] += reward
 
+        env.close()
         message = f'episode {episode + 1}, '
         # episode finishes, record reward
-        for agent, reward in agent_reward.items():
-            episode_rewards[agent][episode] = reward
-            message += f'{agent}: {reward:>4f}; '
+        for agent_id, reward in agent_reward.items():
+            episode_rewards[agent_id][episode] = reward
+            message += f'{agent_id}: {reward:>4f}; '
         print(message)
         # save gif
         frame_list[0].save(os.path.join(gif_dir, f'out{gif_num + episode + 1}.gif'),
@@ -57,8 +58,8 @@ if __name__ == '__main__':
     # training finishes, plot reward
     fig, ax = plt.subplots()
     x = range(1, args.episode_num + 1)
-    for agent, rewards in episode_rewards.items():
-        ax.plot(x, rewards, label=agent)
+    for agent_id, rewards in episode_rewards.items():
+        ax.plot(x, rewards, label=agent_id)
     ax.legend()
     ax.set_xlabel('episode')
     ax.set_ylabel('reward')

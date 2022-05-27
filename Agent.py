@@ -13,7 +13,7 @@ class Agent:
     def __init__(self, obs_dim, act_dim, global_obs_dim, actor_lr, critic_lr):
         self.actor = MLPNetwork(obs_dim, act_dim)
 
-        # critic input all the states and actions
+        # critic input all the observations and actions
         # if there are 3 agents for example, the input for critic is (obs1, obs2, obs3, act1, act2, act3)
         self.critic = MLPNetwork(global_obs_dim, 1)
         self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
