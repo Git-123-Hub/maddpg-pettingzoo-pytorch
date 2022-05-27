@@ -13,7 +13,7 @@ training and evaluation is simple and straightforward, take `simple_tag` for exa
 
 ```shell
 python main.py simple_tag_v2  # training
-python evaluate.py simple_tag_v2  # evaluation
+python evaluate.py simple_tag_v2 1  # evaluate result saved in folder 1
 ```
 
 more details about arguments can be found in `main.py`, `evaluate.py`
