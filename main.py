@@ -3,7 +3,15 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from pettingzoo.mpe import simple_adversary_v2, simple_spread_v2, simple_tag_v2
+from pettingzoo.mpe import simple_adversary_v2, \
+                            simple_crypto_v2, \
+                            simple_push_v2, \
+                            simple_reference_v2, \
+                            simple_speaker_listener_v3, \
+                            simple_spread_v2, \
+                            simple_tag_v2, \
+                            simple_world_comm_v2, \
+                            simple_v2
 
 from MADDPG import MADDPG
 
@@ -12,12 +20,25 @@ def get_env(env_name, ep_len=25):
     """create environment and get observation and action dimension of each agent in this environment"""
     new_env = None
     if env_name == 'simple_adversary_v2':
-        new_env = simple_adversary_v2.parallel_env(max_cycles=ep_len)
-    if env_name == 'simple_spread_v2':
-        new_env = simple_spread_v2.parallel_env(max_cycles=ep_len)
-    if env_name == 'simple_tag_v2':
-        new_env = simple_tag_v2.parallel_env(max_cycles=ep_len)
-
+        new_env = simple_adversary_v2.parallel_env(max_cycles=ep_len) # simple_adversary_v2.env(N=2, max_cycles=25, continuous_actions=False)
+    elif env_name == 'simple_crypto_v2':
+        new_env = simple_crypto_v2.parallel_env(max_cycles=ep_len) # simple_crypto_v2.env(max_cycles=25, continuous_actions=False)
+    elif env_name == 'simple_push_v2':
+        new_env = simple_push_v2.parallel_env(max_cycles=ep_len) # simple_push_v2.env(max_cycles=25, continuous_actions=False)
+    elif env_name == 'simple_reference_v2':
+        new_env = simple_reference_v2.parallel_env(max_cycles=ep_len) # simple_reference_v2.env(local_ratio=0.5, max_cycles=25, continuous_actions=False)
+    elif env_name == 'simple_speaker_listener_v3':
+        new_env = simple_speaker_listener_v3.parallel_env(max_cycles=ep_len) # simple_speaker_listener_v3.env(max_cycles=25, continuous_actions=False)
+    elif env_name == 'simple_spread_v2':
+        new_env = simple_spread_v2.parallel_env(max_cycles=ep_len) # simple_spread_v2.env(N=3, local_ratio=0.5, max_cycles=25, continuous_actions=False)
+    elif env_name == 'simple_tag_v2':
+        new_env = simple_tag_v2.parallel_env(max_cycles=ep_len) # simple_tag_v2.env(num_good=1, num_adversaries=3, num_obstacles=2, max_cycles=25, continuous_actions=False)
+    elif env_name == 'simple_world_comm_v2':
+        new_env = simple_world_comm_v2.parallel_env(max_cycles=ep_len) # simple_world_comm.env(num_good=2, num_adversaries=4, num_obstacles=1,
+                                                                        # num_food=2, max_cycles=25, num_forests=2, continuous_actions=False)
+    elif env_name == 'simple_v2':
+        new_env = simple_v2.parallel_env(max_cycles=ep_len) # simple_v2.env(max_cycles=25, continuous_actions=False)
+    
     new_env.reset()
     _dim_info = {}
     for agent_id in new_env.agents:
@@ -30,8 +51,16 @@ def get_env(env_name, ep_len=25):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('env_name', type=str, default='simple_adversary_v2', help='name of the env',
-                        choices=['simple_adversary_v2', 'simple_spread_v2', 'simple_tag_v2'])
+    parser.add_argument('env_name', type=str, default='simple_world_comm_v2', help='name of the env',
+                        choices=['simple_adversary_v2', 
+                                 'simple_crypto_v2',
+                                 'simple_push_v2',
+                                 'simple_reference_v2',
+                                 'simple_speaker_listener_v3',
+                                 'simple_spread_v2', 
+                                 'simple_tag_v2', 
+                                 'simple_world_comm_v2',
+                                 'simple_v2'])
     parser.add_argument('--episode_num', type=int, default=30000,
                         help='total episode num during training procedure')
     parser.add_argument('--episode_length', type=int, default=25, help='steps per episode')
@@ -74,7 +103,7 @@ if __name__ == '__main__':
                 action = maddpg.select_action(obs)
 
             next_obs, reward, done, info = env.step(action)
-            # env.render()
+            env.render()
             maddpg.add(obs, action, reward, next_obs, done)
 
             for agent_id, r in reward.items():  # update reward

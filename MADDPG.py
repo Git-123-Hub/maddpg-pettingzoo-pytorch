@@ -137,4 +137,5 @@ class MADDPG:
         data = torch.load(file)
         for agent_id, agent in instance.agents.items():
             agent.actor.load_state_dict(data[agent_id])
+            # agent.actor.eval() # https://tutorials.pytorch.kr/beginner/saving_loading_models.html#inference
         return instance
