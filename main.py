@@ -3,7 +3,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from pettingzoo.mpe import simple_adversary_v2, simple_spread_v2, simple_tag_v2, simple_world_comm_v2
+from pettingzoo.mpe import simple_adversary_v2, simple_spread_v2, simple_tag_v2, simple_world_comm_v2, simple_reference_v2
 
 from MADDPG import MADDPG
 
@@ -19,6 +19,8 @@ def get_env(env_name, ep_len=25):
         new_env = simple_tag_v2.parallel_env(max_cycles=ep_len)
     if env_name == 'simple_world_comm_v2':
         new_env = simple_world_comm_v2.parallel_env(max_cycles=ep_len)
+    if env_name == 'simple_reference_v2':
+      new_env = simple_reference_v2.parallel_env(max_cycles=ep_len)
 
     new_env.reset()
     _dim_info = {}
@@ -33,7 +35,7 @@ def get_env(env_name, ep_len=25):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('env_name', type=str, default='simple_adversary_v2', help='name of the env',
-                        choices=['simple_adversary_v2', 'simple_spread_v2', 'simple_tag_v2', 'simple_world_comm_v2'])
+                        choices=['simple_adversary_v2', 'simple_spread_v2', 'simple_tag_v2', 'simple_world_comm_v2', 'simple_reference_v2'])
     parser.add_argument('--episode_num', type=int, default=30000,
                         help='total episode num during training procedure')
     parser.add_argument('--episode_length', type=int, default=25, help='steps per episode')
