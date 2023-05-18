@@ -92,11 +92,11 @@ class MADDPG:
         for agent_id, agent in self.agents.items():
             obs, act, reward, next_obs, done, next_act = self.sample(batch_size)
             # update critic
-            critic_value = agent.critic_value(torch.tensor(obs).to(device), torch.tensor(act).to(device))
+            critic_value = agent.critic_value(torch.tensor(obs.values()).to(device), torch.tensor(act.values()).to(device))
 
             # calculate target critic value
-            next_target_critic_value = agent.target_critic_value(torch.tensor(next_obs).to(device),
-                                                                 torch.tensor(next_act).to(device))
+            next_target_critic_value = agent.target_critic_value(torch.tensor(next_obs.values()).to(device),
+                                                                 torch.tensor(next_act.values()).to(device))
             target_value = reward[agent_id] + gamma * next_target_critic_value * (1 - done[agent_id])
 
             critic_loss = F.mse_loss(critic_value, target_value.detach(), reduction='mean')
@@ -106,7 +106,7 @@ class MADDPG:
             # action of the current agent is calculated using its actor
             action, logits = agent.action(obs[agent_id], model_out=True)
             act[agent_id] = action
-            actor_loss = -agent.critic_value(torch.tensor(obs).to(device), torch.tensor(act).to(device)).mean()
+            actor_loss = -agent.critic_value(torch.tensor(obs.values()).to(device), torch.tensor(act.values()).to(device)).mean()
             actor_loss_pse = torch.pow(logits, 2).mean()
             agent.update_actor(actor_loss + 1e-3 * actor_loss_pse)
             self.logger.info(f'agent{agent_id}: critic loss: {critic_loss.item()}, actor loss: {actor_loss.item()}')
