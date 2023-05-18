@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('--episode_length', type=int, default=25, help='steps per episode')
     parser.add_argument('--learn_interval', type=int, default=100,
                         help='steps interval between learning time')
-    parser.add_argument('--random_steps', type=int, default=5e4,
+    parser.add_argument('--random_steps', type=int, default=2e4,
                         help='random steps before the agent start to learn')
     parser.add_argument('--tau', type=float, default=0.02, help='soft update parameter')
     parser.add_argument('--gamma', type=float, default=0.95, help='discount factor')
