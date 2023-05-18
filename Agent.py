@@ -6,16 +6,17 @@ import torch.nn.functional as F
 from torch import nn, Tensor
 from torch.optim import Adam
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class Agent:
     """Agent that can interact with environment from pettingzoo"""
 
     def __init__(self, obs_dim, act_dim, global_obs_dim, actor_lr, critic_lr):
-        self.actor = MLPNetwork(obs_dim, act_dim)
+        self.actor = MLPNetwork(obs_dim, act_dim).to(device)
 
         # critic input all the observations and actions
         # if there are 3 agents for example, the input for critic is (obs1, obs2, obs3, act1, act2, act3)
-        self.critic = MLPNetwork(global_obs_dim, 1)
+        self.critic = MLPNetwork(global_obs_dim, 1).to(device)
         self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         self.target_actor = deepcopy(self.actor)
@@ -35,7 +36,7 @@ class Agent:
         # b) calculate action when update actor, where input(obs) is sampled from replay buffer with size:
         # torch.Size([batch_size, state_dim])
 
-        logits = self.actor(obs)  # torch.Size([batch_size, action_size])
+        logits = self.actor(obs.to(device))  # torch.Size([batch_size, action_size])
         # action = self.gumbel_softmax(logits)
         action = F.gumbel_softmax(logits, hard=True)
         if model_out:
@@ -47,7 +48,7 @@ class Agent:
         # we use target actor to get next action given next states,
         # which is sampled from replay buffer with size torch.Size([batch_size, state_dim])
 
-        logits = self.target_actor(obs)  # torch.Size([batch_size, action_size])
+        logits = self.target_actor(obs.to(device))  # torch.Size([batch_size, action_size])
         # action = self.gumbel_softmax(logits)
         action = F.gumbel_softmax(logits, hard=True)
         return action.squeeze(0).detach()
