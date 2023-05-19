@@ -40,8 +40,6 @@ if __name__ == '__main__':
             next_states, rewards, dones, infos = env.step(actions)
             frame_list.append(Image.fromarray(env.render(mode='rgb_array')))
             states = next_states
-            print(actions)
-            print(states)
             for agent_id, reward in rewards.items():  # update reward
                 agent_reward[agent_id] += reward
 
