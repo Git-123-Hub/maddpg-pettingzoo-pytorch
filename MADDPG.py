@@ -27,6 +27,7 @@ def setup_logger(filename):
 
 class MADDPG:
     """A MADDPG(Multi Agent Deep Deterministic Policy Gradient) agent"""
+    device = 'cuda'
 
     def __init__(self, dim_info, capacity, batch_size, actor_lr, critic_lr, res_dir):
         # sum all the dims of each agent to get input dim for critic
@@ -35,8 +36,8 @@ class MADDPG:
         self.agents = {}
         self.buffers = {}
         for agent_id, (obs_dim, act_dim) in dim_info.items():
-            self.agents[agent_id] = Agent(obs_dim, act_dim, global_obs_act_dim, actor_lr, critic_lr)
-            self.buffers[agent_id] = Buffer(capacity, obs_dim, act_dim, 'cpu')
+            self.agents[agent_id] = Agent(obs_dim, act_dim, global_obs_act_dim, actor_lr, critic_lr, self.device)
+            self.buffers[agent_id] = Buffer(capacity, obs_dim, act_dim, self.device)
         self.dim_info = dim_info
 
         self.batch_size = batch_size
@@ -81,7 +82,7 @@ class MADDPG:
     def select_action(self, obs):
         actions = {}
         for agent, o in obs.items():
-            o = torch.from_numpy(o).unsqueeze(0).float()
+            o = torch.from_numpy(o).unsqueeze(0).float().to(self.device)
             a = self.agents[agent].action(o)  # torch.Size([1, action_size])
             # NOTE that the output is a tensor, convert it to int before input to the environment
             actions[agent] = a.squeeze(0).argmax().item()

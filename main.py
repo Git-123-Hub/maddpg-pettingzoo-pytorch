@@ -3,7 +3,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from pettingzoo.mpe import simple_adversary_v2, simple_spread_v2, simple_tag_v2
+from pettingzoo.mpe import simple_adversary_v3, simple_spread_v3, simple_tag_v3
 
 from MADDPG import MADDPG
 
@@ -11,12 +11,12 @@ from MADDPG import MADDPG
 def get_env(env_name, ep_len=25):
     """create environment and get observation and action dimension of each agent in this environment"""
     new_env = None
-    if env_name == 'simple_adversary_v2':
-        new_env = simple_adversary_v2.parallel_env(max_cycles=ep_len)
-    if env_name == 'simple_spread_v2':
-        new_env = simple_spread_v2.parallel_env(max_cycles=ep_len)
-    if env_name == 'simple_tag_v2':
-        new_env = simple_tag_v2.parallel_env(max_cycles=ep_len)
+    if env_name == 'simple_adversary_v3':
+        new_env = simple_adversary_v3.parallel_env(max_cycles=ep_len)
+    if env_name == 'simple_spread_v3':
+        new_env = simple_spread_v3.parallel_env(max_cycles=ep_len,render_mode="rgb_array")
+    if env_name == 'simple_tag_v3':
+        new_env = simple_tag_v3.parallel_env(max_cycles=ep_len)
 
     new_env.reset()
     _dim_info = {}
@@ -30,8 +30,8 @@ def get_env(env_name, ep_len=25):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('env_name', type=str, default='simple_adversary_v2', help='name of the env',
-                        choices=['simple_adversary_v2', 'simple_spread_v2', 'simple_tag_v2'])
+    parser.add_argument('env_name', type=str, default='simple_adversary_v3', help='name of the env',
+                        choices=['simple_adversary_v3', 'simple_spread_v3', 'simple_tag_v3'])
     parser.add_argument('--episode_num', type=int, default=30000,
                         help='total episode num during training procedure')
     parser.add_argument('--episode_length', type=int, default=25, help='steps per episode')
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     # reward of each episode of each agent
     episode_rewards = {agent_id: np.zeros(args.episode_num) for agent_id in env.agents}
     for episode in range(args.episode_num):
-        obs = env.reset()
+        obs, _ = env.reset()
         agent_reward = {agent_id: 0 for agent_id in env.agents}  # agent reward of the current episode
         while env.agents:  # interact with the env for an episode
             step += 1
@@ -72,8 +72,9 @@ if __name__ == '__main__':
                 action = {agent_id: env.action_space(agent_id).sample() for agent_id in env.agents}
             else:
                 action = maddpg.select_action(obs)
-
-            next_obs, reward, done, info = env.step(action)
+            
+            next_obs, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
             # env.render()
             maddpg.add(obs, action, reward, next_obs, done)
 

@@ -1,3 +1,5 @@
 .idea/
 /results/
 /.venv/
+.vscode/
+__pycache__
